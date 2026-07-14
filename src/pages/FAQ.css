@@ -1,0 +1,172 @@
+.d_faq_page {
+  background: var(--d-bg);
+}
+
+/* Banner */
+.d_faq_banner {
+  height: 280px;
+}
+
+.d_faq_banner .d_page_banner_content {
+  width: 100%;
+}
+
+.d_faq_banner h1 {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+/* Page banner base styles (reused from other pages) */
+.d_page_banner {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+}
+
+.d_page_banner_overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15,23,42,0.78) 0%, rgba(15,23,42,0.45) 100%);
+}
+
+.d_page_banner_content {
+  position: relative;
+  z-index: 1;
+  color: var(--d-white);
+}
+
+.d_page_banner_content h1 {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.d_breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(248,250,252,0.7);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.d_breadcrumb a { color: rgba(248,250,252,0.85); text-decoration: none; }
+.d_breadcrumb a:hover { color: var(--d-accent-light); }
+
+/* Section eyebrow with icon */
+.d_section_eyebrow svg {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Alt section bg */
+.d_bg_alt_section {
+  background: var(--d-white);
+}
+
+/* FAQ Contact Cards */
+.d_faq_contact_card {
+  background: var(--d-card);
+  border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-lg);
+  padding: 32px 24px;
+  text-align: center;
+  height: 100%;
+  transition: var(--d-transition);
+}
+
+.d_faq_contact_card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--d-shadow-md);
+  border-color: transparent;
+}
+
+.d_faq_contact_icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--d-radius-md);
+  background: rgba(37,99,235,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--d-secondary);
+  margin: 0 auto 18px;
+}
+
+.d_faq_contact_card h4 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--d-primary);
+  margin-bottom: 8px;
+}
+
+.d_faq_contact_card p {
+  font-size: 14px;
+  color: var(--d-text-muted);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.d_faq_contact_link {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--d-secondary);
+  text-decoration: none;
+  transition: var(--d-transition);
+}
+
+.d_faq_contact_link:hover {
+  color: var(--d-primary);
+  text-decoration: underline;
+}
+
+/* FAQ CTA */
+.d_faq_cta {
+  background: var(--d-gradient-primary);
+  border-radius: var(--d-radius-lg);
+  padding: 32px 36px;
+  color: var(--d-white);
+}
+
+.d_faq_cta h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--d-white);
+}
+
+.d_faq_cta p {
+  font-size: 15px;
+  color: rgba(248,250,252,0.85);
+  margin: 0;
+}
+
+.d_faq_cta .d_btn_primary {
+  background: var(--d-white);
+  color: var(--d-secondary);
+}
+
+.d_faq_cta .d_btn_primary:hover {
+  background: var(--d-accent-light);
+  color: var(--d-white);
+}
+
+@media (max-width: 768px) {
+  .d_faq_banner {
+    height: 200px;
+  }
+  .d_faq_banner h1 {
+    font-size: 28px;
+  }
+  .d_faq_cta {
+    padding: 24px 20px;
+    text-align: center;
+  }
+}

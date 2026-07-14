@@ -1,0 +1,33 @@
+.d_faq_accordion .d_faq_item {
+  border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-md) !important;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.d_faq_accordion .accordion-button {
+  font-family: var(--d-font-main);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--d-primary);
+  background: var(--d-card);
+  padding: 16px 20px;
+}
+
+.d_faq_accordion .accordion-button:not(.collapsed) {
+  background: var(--d-bg);
+  color: var(--d-secondary);
+  box-shadow: none;
+}
+
+.d_faq_accordion .accordion-button:focus {
+  box-shadow: none;
+  border-color: var(--d-border);
+}
+
+.d_faq_accordion .accordion-body {
+  font-size: 13.5px;
+  color: var(--d-text-muted);
+  line-height: 1.7;
+  padding: 4px 20px 18px;
+}

@@ -1,0 +1,39 @@
+:root {
+  /* Brand colors */
+  --d-primary: #0f172a;
+  --d-primary-light: #1e293b;
+  --d-secondary: #2563eb;
+  --d-secondary-light: #3b82f6;
+  --d-accent: #f97316;
+  --d-accent-light: #fb923c;
+  --d-success: #22c55e;
+  --d-danger: #ef4444;
+  --d-bg: #f8fafc;
+  --d-card: #ffffff;
+  --d-border: #e2e8f0;
+  --d-text: #1e293b;
+  --d-text-muted: #64748b;
+  --d-white: #ffffff;
+
+  /* Gradients */
+  --d-gradient-primary: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  --d-gradient-accent: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  --d-gradient-glass: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.35) 100%);
+
+  /* Radius */
+  --d-radius-sm: 8px;
+  --d-radius-md: 14px;
+  --d-radius-lg: 22px;
+  --d-radius-pill: 999px;
+
+  /* Shadows */
+  --d-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --d-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --d-shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+
+  /* Typography */
+  --d-font-main: "Poppins", sans-serif;
+
+  /* Transitions */
+  --d-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

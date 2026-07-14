@@ -1,0 +1,40 @@
+.d_ad_wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.d_ad_placeholder {
+  width: 100%;
+  border: 1.5px dashed var(--d-border);
+  border-radius: var(--d-radius-md);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(37, 99, 235, 0.03),
+    rgba(37, 99, 235, 0.03) 10px,
+    rgba(37, 99, 235, 0.06) 10px,
+    rgba(37, 99, 235, 0.06) 20px
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--d-text-muted);
+  text-align: center;
+  padding: 12px;
+}
+
+.d_ad_tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--d-secondary);
+}
+
+.d_ad_size_label {
+  font-size: 12.5px;
+  color: var(--d-text-muted);
+}

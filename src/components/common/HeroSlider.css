@@ -1,0 +1,120 @@
+.d_hero_slider {
+  position: relative;
+}
+
+.d_hero_swiper {
+  border-radius: var(--d-radius-lg);
+  overflow: hidden;
+}
+
+.d_hero_slide {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  padding: 0 8%;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.d_hero_slide_overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15,23,42,0.82) 0%, rgba(15,23,42,0.45) 60%, rgba(15,23,42,0.15) 100%);
+  z-index: 1;
+}
+
+.d_hero_slide_content {
+  position: relative;
+  z-index: 2;
+  max-width: 560px;
+}
+
+.d_hero_shape {
+  display: none;
+}
+
+.d_hero_eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.d_hero_title {
+  font-size: 46px;
+  font-weight: 800;
+  color: var(--d-white);
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
+}
+
+.d_hero_subtitle {
+  font-size: 16px;
+  color: rgba(248, 250, 252, 0.75);
+  margin-bottom: 28px;
+  max-width: 440px;
+}
+
+.d_hero_cta {
+  font-size: 15px;
+  padding: 14px 30px;
+}
+
+.d_hero_shape {
+  position: absolute;
+  right: -80px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  border: 60px solid;
+  opacity: 0.15;
+}
+
+.d_hero_swiper .swiper-pagination-bullet {
+  background: var(--d-white);
+  opacity: 0.5;
+  width: 8px;
+  height: 8px;
+}
+
+.d_hero_swiper .swiper-pagination-bullet-active {
+  opacity: 1;
+  background: var(--d-accent);
+  width: 22px;
+  border-radius: 6px;
+}
+
+.d_hero_swiper .swiper-button-next,
+.d_hero_swiper .swiper-button-prev {
+  color: var(--d-white);
+  background: rgba(255, 255, 255, 0.15);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  backdrop-filter: blur(6px);
+}
+
+.d_hero_swiper .swiper-button-next::after,
+.d_hero_swiper .swiper-button-prev::after {
+  font-size: 15px;
+}
+
+@media (max-width: 768px) {
+  .d_hero_slide {
+    min-height: 360px;
+    padding: 0 6%;
+  }
+  .d_hero_title {
+    font-size: 28px;
+  }
+  .d_hero_subtitle {
+    font-size: 14px;
+  }
+}

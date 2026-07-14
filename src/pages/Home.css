@@ -1,0 +1,77 @@
+.d_home_page {
+  background: var(--d-bg);
+}
+
+.d_bg_alt {
+  background: var(--d-white);
+}
+
+.d_hero_section {
+  padding-top: 8px;
+}
+
+/* Flash Sale banner */
+.d_flash_sale_banner {
+  background: var(--d-gradient-primary);
+  border-radius: var(--d-radius-lg);
+  padding: 26px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.d_flash_sale_heading .d_section_title {
+  margin: 2px 0 0;
+}
+
+/* Special Offer cards */
+.d_offer_card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(120deg, #fff7ed 0%, #ffffff 60%);
+  border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-lg);
+  padding: 30px 28px;
+  color: var(--d-primary);
+  transition: var(--d-transition);
+  height: 100%;
+}
+
+.d_offer_card_blue {
+  background: linear-gradient(120deg, #eff6ff 0%, #ffffff 60%);
+}
+
+.d_offer_card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--d-shadow-md);
+}
+
+.d_offer_card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+
+.d_offer_card p {
+  font-size: 13.5px;
+  color: var(--d-text-muted);
+  margin: 0;
+}
+
+.d_offer_card svg {
+  font-size: 20px;
+  flex-shrink: 0;
+  color: var(--d-accent);
+}
+
+@media (max-width: 576px) {
+  .d_flash_sale_banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

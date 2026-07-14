@@ -1,0 +1,344 @@
+.d_login_page {
+  min-height: 100vh;
+  background: var(--d-bg);
+}
+
+/* Left visual */
+.d_login_visual {
+  height: 100%;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 48px;
+}
+
+.d_login_visual_overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,0.3) 0%, rgba(15,23,42,0.85) 100%);
+}
+
+.d_login_visual_content {
+  position: relative;
+  z-index: 1;
+  color: var(--d-white);
+}
+
+.d_login_logo {
+  margin-bottom: 32px;
+}
+
+.d_login_visual_content h2 {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.d_login_visual_content p {
+  font-size: 14.5px;
+  color: rgba(248,250,252,0.8);
+  line-height: 1.75;
+  margin-bottom: 24px;
+  max-width: 380px;
+}
+
+.d_login_perks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.d_login_perks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: rgba(248,250,252,0.85);
+}
+
+.d_login_perks svg {
+  color: var(--d-success);
+  flex-shrink: 0;
+}
+
+/* Right form column */
+.d_login_form_col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.d_login_form_wrap {
+  width: 100%;
+  max-width: 460px;
+}
+
+/* Tabs */
+.d_login_tabs {
+  display: flex;
+  background: var(--d-bg);
+  border: 1.5px solid var(--d-border);
+  border-radius: var(--d-radius-pill);
+  padding: 4px;
+  margin-bottom: 28px;
+}
+
+.d_login_tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--d-font-main);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--d-text-muted);
+  padding: 10px 20px;
+  border-radius: var(--d-radius-pill);
+  transition: var(--d-transition);
+}
+
+.d_login_tabs button.active {
+  background: var(--d-primary);
+  color: var(--d-white);
+}
+
+/* Headings */
+.d_login_heading {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--d-primary);
+  margin-bottom: 6px;
+  letter-spacing: -0.4px;
+}
+
+.d_login_sub {
+  font-size: 14px;
+  color: var(--d-text-muted);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+/* Form groups */
+.d_form_group {
+  margin-bottom: 18px;
+}
+
+.d_form_group .form-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--d-primary);
+  margin-bottom: 7px;
+}
+
+.d_input_icon_wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.d_input_icon {
+  position: absolute;
+  left: 14px;
+  color: var(--d-text-muted);
+  font-size: 14px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.d_auth_input {
+  width: 100%;
+  border: 1.5px solid var(--d-border) !important;
+  border-radius: var(--d-radius-md) !important;
+  padding: 12px 16px 12px 42px !important;
+  font-family: var(--d-font-main) !important;
+  font-size: 14px !important;
+  background: var(--d-bg) !important;
+  color: var(--d-text) !important;
+  transition: var(--d-transition) !important;
+}
+
+.d_auth_input:focus {
+  border-color: var(--d-secondary) !important;
+  background: var(--d-white) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
+  outline: none !important;
+}
+
+.d_pw_toggle {
+  position: absolute;
+  right: 14px;
+  border: none;
+  background: transparent;
+  color: var(--d-text-muted);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.d_pw_label_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.d_pw_label_row .form-label {
+  margin: 0;
+}
+
+.d_forgot_link {
+  border: none;
+  background: transparent;
+  font-family: var(--d-font-main);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--d-secondary);
+  padding: 0;
+}
+
+/* Checkbox */
+.d_checkbox_label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--d-text-muted);
+  cursor: pointer;
+}
+
+.d_checkbox_label input {
+  margin-top: 3px;
+  accent-color: var(--d-secondary);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.d_checkbox_label a {
+  color: var(--d-secondary);
+  text-decoration: underline;
+}
+
+.d_field_error {
+  font-size: 12.5px;
+  color: var(--d-danger);
+  margin: 4px 0 0;
+}
+
+/* Submit */
+.d_auth_submit {
+  width: 100%;
+  justify-content: center;
+  padding: 13px;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+/* Divider */
+.d_auth_divider {
+  text-align: center;
+  position: relative;
+  margin: 22px 0;
+}
+
+.d_auth_divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--d-border);
+}
+
+.d_auth_divider span {
+  position: relative;
+  background: var(--d-bg);
+  padding: 0 14px;
+  font-size: 12.5px;
+  color: var(--d-text-muted);
+  font-weight: 500;
+}
+
+/* Social buttons */
+.d_social_btns {
+  display: flex;
+  gap: 12px;
+}
+
+.d_social_btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--d-radius-md);
+  border: 1.5px solid var(--d-border);
+  background: var(--d-bg);
+  font-family: var(--d-font-main);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 11px 16px;
+  transition: var(--d-transition);
+  color: var(--d-text);
+}
+
+.d_google_btn:hover {
+  border-color: #ea4335;
+  color: #ea4335;
+}
+
+.d_fb_btn:hover {
+  border-color: #1877f2;
+  color: #1877f2;
+}
+
+/* Success */
+.d_auth_success {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid var(--d-success);
+  border-radius: var(--d-radius-lg);
+  padding: 24px;
+}
+
+.d_auth_success > svg {
+  color: var(--d-success);
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.d_auth_success h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--d-primary);
+  margin-bottom: 6px;
+}
+
+.d_auth_success p {
+  font-size: 13.5px;
+  color: var(--d-text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Back link */
+.d_back_link {
+  border: none;
+  background: transparent;
+  font-family: var(--d-font-main);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--d-secondary);
+  padding: 0;
+  margin-bottom: 20px;
+  display: inline-block;
+}

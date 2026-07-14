@@ -1,0 +1,17 @@
+.d_coming_soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 100px 20px;
+}
+
+.d_coming_soon_icon {
+  font-size: 40px;
+  color: var(--d-secondary);
+  margin-bottom: 18px;
+}
+
+.d_coming_soon .d_section_subtitle {
+  margin-bottom: 24px;
+}

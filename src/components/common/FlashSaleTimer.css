@@ -1,0 +1,43 @@
+.d_flash_timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.d_flash_timer_label {
+  font-size: 13px;
+  color: var(--d-white);
+  opacity: 0.85;
+}
+
+.d_flash_timer_units {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.d_flash_unit {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--d-white);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 6px 9px;
+  border-radius: var(--d-radius-sm);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 44px;
+  justify-content: center;
+  animation: d_pulse 2s ease-in-out infinite;
+}
+
+.d_flash_unit small {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.d_flash_sep {
+  color: var(--d-white);
+  font-weight: 700;
+}
