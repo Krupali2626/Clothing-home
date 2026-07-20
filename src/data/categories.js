@@ -29,7 +29,7 @@ const categories = [
     name: "Winter Wear",
     slug: "winter-wear",
     type: "clothing",
-    image: "https://images.unsplash.com/photo-1520975867021-76d17493b3f0?w=400&h=400&fit=crop&auto=format",
+    image: "https://i.pinimg.com/736x/ac/7c/c0/ac7cc0b897d2297ce34f9d19138f354e.jpg",
     count: 96,
   },
   {
@@ -37,7 +37,7 @@ const categories = [
     name: "Summer Wear",
     slug: "summer-wear",
     type: "clothing",
-    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&auto=format",
+    image: "https://i.pinimg.com/736x/bd/39/ed/bd39ed68aa864bf960f09d9749eb3f54.jpg",
     count: 128,
   },
   {
@@ -45,7 +45,7 @@ const categories = [
     name: "Shoes",
     slug: "shoes",
     type: "clothing",
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop&auto=format",
+    image: "https://i.pinimg.com/736x/36/6c/31/366c317a2d2db6cf738f170f429cde17.jpg",
     count: 210,
   },
   {
@@ -53,7 +53,7 @@ const categories = [
     name: "Bags",
     slug: "bags",
     type: "clothing",
-    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop&auto=format",
+    image: "https://i.pinimg.com/736x/14/bf/1a/14bf1a5bb9e88cb954792ce15dde08de.jpg",
     count: 88,
   },
   {
@@ -77,7 +77,7 @@ const categories = [
     name: "Television",
     slug: "tv",
     type: "appliances",
-    image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829e1?w=400&h=400&fit=crop&auto=format",
+    image: "https://i.pinimg.com/736x/97/4a/76/974a7674f4b9cd66f5602d6751598e0d.jpg",
     count: 64,
   },
   {

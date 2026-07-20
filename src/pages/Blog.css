@@ -142,6 +142,37 @@
   width: 160px;
 }
 
+/* Tags filter */
+.d_blog_tags_filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: var(--d-card);
+  border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-md);
+}
+
+.d_blog_tags_filter_label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--d-text);
+}
+
+.d_blog_tags_list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.d_tag_chip.active {
+  background: var(--d-secondary);
+  border-color: var(--d-secondary);
+  color: var(--d-white);
+}
+
 /* Blog tags */
 .d_blog_tags {
   display: flex;

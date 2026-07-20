@@ -7,8 +7,6 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaTimes,
-  FaThLarge,
-  FaList,
 } from "react-icons/fa";
 import ProductCard from "../components/common/ProductCard";
 import GoogleAdBanner from "../components/common/GoogleAdBanner";
@@ -173,10 +171,11 @@ const FilterPanel = ({ filters, setFilters }) => {
 };
 
 const Clothing = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initCategory = searchParams.get("category") || "";
   const initSort = searchParams.get("sort") || "featured";
   const initFilter = searchParams.get("filter") || "";
+  const initSearch = searchParams.get("search") || "";
 
   const [sort, setSort] = useState(initSort);
   const [filters, setFilters] = useState({
@@ -187,8 +186,20 @@ const Clothing = () => {
     inStock: false,
   });
   const [showMobileFilter, setShowMobileFilter] = useState(false);
-  const [gridView, setGridView] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initSearch);
+
+  // Update URL when search changes
+  const handleSearchChange = (e) => {
+    const newSearch = e.target.value;
+    setSearch(newSearch);
+    if (newSearch.trim()) {
+      setSearchParams({ ...Object.fromEntries(searchParams), search: newSearch });
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("search");
+      setSearchParams(newParams);
+    }
+  };
 
   const filtered = useMemo(() => {
     let list = [...clothingProducts];
@@ -203,8 +214,13 @@ const Clothing = () => {
     }
     if (filters.minRating) list = list.filter((p) => p.rating >= filters.minRating);
     if (filters.inStock) list = list.filter((p) => p.stock > 0);
-    if (search.trim())
-      list = list.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      list = list.filter((p) => 
+        p.name.toLowerCase().includes(searchLower) || 
+        p.brand.toLowerCase().includes(searchLower)
+      );
+    }
 
     switch (sort) {
       case "newest": return list.reverse();
@@ -283,7 +299,7 @@ const Clothing = () => {
                     type="text"
                     placeholder="Search clothing…"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={handleSearchChange}
                   />
                 </div>
                 <div className="d_sort_wrap">
@@ -298,22 +314,6 @@ const Clothing = () => {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </Form.Select>
-                </div>
-                <div className="d_grid_toggle">
-                  <button
-                    className={gridView ? "active" : ""}
-                    onClick={() => setGridView(true)}
-                    aria-label="Grid view"
-                  >
-                    <FaThLarge />
-                  </button>
-                  <button
-                    className={!gridView ? "active" : ""}
-                    onClick={() => setGridView(false)}
-                    aria-label="List view"
-                  >
-                    <FaList />
-                  </button>
                 </div>
               </div>
             </div>
@@ -332,14 +332,14 @@ const Clothing = () => {
                 </button>
               </div>
             ) : (
-              <Row className={`g-3 ${gridView ? "" : "d_list_view"}`}>
+              <Row className="g-3">
                 {filtered.map((p) => (
                   <Col
                     key={p.id}
                     xs={6}
-                    md={gridView ? 4 : 12}
-                    lg={gridView ? 4 : 12}
-                    xl={gridView ? 3 : 12}
+                    md={4}
+                    lg={4}
+                    xl={3}
                   >
                     <ProductCard product={p} />
                   </Col>

@@ -12,6 +12,7 @@ import Clothing from "../pages/Clothing";
 import Appliances from "../pages/Appliances";
 import ProductDetail from "../pages/ProductDetail";
 import MyOrders from "../pages/MyOrders";
+import MyAccount from "../pages/MyAccount";
 import PolicyPage from "../pages/PolicyPage";
 import FAQ from "../pages/FAQ";
 import ComingSoon from "../pages/ComingSoon";
@@ -26,7 +27,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/blog" element={<Blog />} />
-      <Route path="/blog/:id" element={<BlogPost />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
       <Route path="/wishlist" element={<Wishlist />} />
@@ -35,6 +36,7 @@ const AppRoutes = () => {
       <Route path="/appliances" element={<Appliances />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/my-account" element={<MyAccount />} />
       <Route path="/privacy-policy" element={<PolicyPage policyType="privacy" />} />
       <Route path="/terms-conditions" element={<PolicyPage policyType="terms" />} />
       <Route path="/refund-policy" element={<PolicyPage policyType="refund" />} />

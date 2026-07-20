@@ -97,6 +97,10 @@
   background: var(--d-accent);
   color: var(--d-white);
 }
+.d_product_hover_actions button.active {
+  background: #ef4444;
+  color: var(--d-white);
+}
 
 .d_product_out_of_stock {
   position: absolute;

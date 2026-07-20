@@ -98,7 +98,9 @@ const Home = () => {
 
       {/* In-feed Ad */}
       <div className=" d_section_sm">
-        <GoogleAdBanner size="banner" label="Between Products · Responsive" />
+        <div className="container">
+          <GoogleAdBanner size="banner" label="Between Products · Responsive" />
+        </div>
       </div>
 
       {/* Flash Sale */}

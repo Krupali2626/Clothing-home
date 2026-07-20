@@ -210,6 +210,7 @@ const ProductDetail = () => {
                 >
                   <FaShoppingCart /> {product.stock === 0 ? "Notify Me" : "Add to Cart"}
                 </button>
+                <div className="d_detail_wishlist_share">
                 <button
                   className={`d_detail_wishlist_btn ${wishlist ? "active" : ""}`}
                   onClick={() => setWishlist((w) => !w)}
@@ -220,6 +221,8 @@ const ProductDetail = () => {
                 <button className="d_detail_share_btn" aria-label="Share">
                   <FaShareAlt />
                 </button>
+                </div>
+                
               </div>
 
               <Link to={product.type === "clothing" ? "/clothing" : "/appliances"} className="d_detail_buy_now">
