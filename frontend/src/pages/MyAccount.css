@@ -18,7 +18,7 @@
 
 .d_myaccount_sidebar_profile {
   padding: 24px;
-  background: linear-gradient(135deg, var(--d-primary), var(--d-secondary));
+  background: var(--d-primary);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -352,7 +352,7 @@
 .d_myaccount_payment_card {
   width: 100%;
   max-width: 360px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--d-primary);
   border-radius: var(--d-radius-lg);
   padding: 24px;
   color: var(--d-white);
@@ -427,7 +427,7 @@
 }
 
 .d_stat_card {
-  background: linear-gradient(135deg, var(--d-primary), #7c3aed);
+  background: var(--d-primary);
   padding: 24px;
   border-radius: var(--d-radius-lg);
   color: var(--d-white);
