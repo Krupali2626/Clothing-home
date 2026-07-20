@@ -93,6 +93,7 @@ const Cart = () => {
                 <span>Price</span>
                 <span>Quantity</span>
                 <span>Total</span>
+                
                 <span></span>
               </div>
 

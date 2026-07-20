@@ -15,6 +15,7 @@ import MyOrders from "../pages/MyOrders";
 import PolicyPage from "../pages/PolicyPage";
 import FAQ from "../pages/FAQ";
 import ComingSoon from "../pages/ComingSoon";
+import ReviewCard from "../components/common/ReviewCard";
 
 /**
  * Central route table with all available pages linked.
@@ -40,6 +41,7 @@ const AppRoutes = () => {
       <Route path="/shipping-policy" element={<PolicyPage policyType="shipping" />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="*" element={<ComingSoon />} />
+
     </Routes>
   );
 };

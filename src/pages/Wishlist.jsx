@@ -85,7 +85,7 @@ const Wishlist = () => {
                   </span>
                 )}
                 {product.discount > 0 && (
-                  <span className="d_badge_pill d_wishlist_discount_badge">
+                  <span className="d_badge_pill d_wishlist_discount_badge ">
                     -{product.discount}%
                   </span>
                 )}
@@ -151,7 +151,7 @@ const Wishlist = () => {
             </div>
             <Row className="g-3">
               {suggested.map((p) => (
-                <Col key={p.id} xs={6} md={4} lg={3}>
+                <Col key={p.id} xs={6} sm={4} md={4} lg={3}>
                   <ProductCard product={p} />
                 </Col>
               ))}

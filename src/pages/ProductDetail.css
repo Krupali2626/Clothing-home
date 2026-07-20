@@ -286,7 +286,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--d-secondary);
-  background: rgba(37, 99, 235, 0.08);
+  background: #eb53251f;
   padding: 8px 16px;
   border-radius: var(--d-radius-pill);
 }

@@ -2,53 +2,53 @@
 const brands = [
   {
     id: "b1",
-    name: "Urban Thread",
-    logo: "https://images.unsplash.com/photo-1611312449408-fcece27cdbb7?w=220&h=110&fit=crop&auto=format",
+    name: "Gucci",
+    logo: "https://brandlogos.net/wp-content/uploads/2021/11/Gucci-logo-icon-512x355.png",
   },
   {
     id: "b2",
-    name: "Nova Fit",
-    logo: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=220&h=110&fit=crop&auto=format",
+    name: "Louis Vuitton",
+    logo: "https://brandlogos.net/wp-content/uploads/2015/02/louis-vuitton-monogram-logo-1024x1024.png",
   },
   {
     id: "b3",
-    name: "Luxe Knot",
-    logo: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=220&h=110&fit=crop&auto=format",
+    name: "Prada",
+    logo: "https://brandlogos.net/wp-content/uploads/2024/12/prada-logo_brandlogos.net_lirhi-512x85.png",
   },
   {
     id: "b4",
-    name: "Denim Co.",
-    logo: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=220&h=110&fit=crop&auto=format",
+    name: "Adidas",
+    logo: "https://brandlogos.net/wp-content/uploads/2015/09/adidas_originals-logo_brandlogos.net_iny9j-512x453.png",
   },
   {
     id: "b5",
-    name: "Stride",
-    logo: "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=220&h=110&fit=crop&auto=format",
+    name: "Puma",
+    logo: "https://brandlogos.net/wp-content/uploads/2015/04/puma-se-1980-logo-1024x799.png",
   },
   {
     id: "b6",
-    name: "HomePro",
-    logo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=220&h=110&fit=crop&auto=format",
+    name: "H&M",
+    logo: "https://brandlogos.net/wp-content/uploads/2017/01/hm-logo_brandlogos.net_n4ee8-512x340.png",
   },
   {
     id: "b7",
-    name: "KitchTech",
-    logo: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=220&h=110&fit=crop&auto=format",
+    name: "Under Armour",
+    logo: "https://brandlogos.net/wp-content/uploads/2014/12/Under-Armour-logomark-vector-512x300.png",
   },
   {
     id: "b8",
-    name: "CoolBreeze",
-    logo: "https://images.unsplash.com/photo-1631545806609-75a1b7e9680b?w=220&h=110&fit=crop&auto=format",
+    name: "Calvin Klein",
+    logo: "https://brandlogos.net/wp-content/uploads/2014/12/calvin_klein-logo_brandlogos.net_m7zln-512x360.png",
   },
   {
     id: "b9",
-    name: "PureLine",
-    logo: "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=220&h=110&fit=crop&auto=format",
+    name: "Zara",
+    logo: "https://brandlogos.net/wp-content/uploads/2022/04/zara-logo_brandlogos.net_ukd3q-512x216.png",
   },
   {
     id: "b10",
-    name: "Voltix",
-    logo: "https://images.unsplash.com/photo-1593359677879-a4bb92f829e1?w=220&h=110&fit=crop&auto=format",
+    name: "Tommy Hilfiger",
+    logo: "https://brandlogos.net/wp-content/uploads/2025/02/tommy_hilfiger-logo_brandlogos.net_z9xcn-512x344.png",
   },
 ];
 

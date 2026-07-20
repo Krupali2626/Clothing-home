@@ -36,7 +36,7 @@ const ProductCard = ({ product }) => {
           <img src={image} alt={name} loading="lazy" />
         </Link>
 
-        <div className="d_product_hover_actions">
+        <div className="d_product_hover_actions ">
           <button type="button" aria-label="Add to wishlist" title="Add to Wishlist">
             <FaHeart />
           </button>

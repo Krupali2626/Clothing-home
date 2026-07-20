@@ -81,7 +81,7 @@ Primary
 Secondary
 
 ```
-#2563EB
+#eb5325
 ```
 
 Accent

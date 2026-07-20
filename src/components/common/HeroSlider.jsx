@@ -24,7 +24,7 @@ const slides = [
     cta: "Shop Appliances",
     link: "/appliances",
     image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1400&h=600&fit=crop&auto=format",
-    accent: "#2563EB",
+    accent: "#eb5325",
   },
   {
     id: 3,
@@ -54,7 +54,7 @@ const slides = [
     cta: "Start Shopping",
     link: "/clothing",
     image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1400&h=600&fit=crop&auto=format",
-    accent: "#2563EB",
+    accent: "#eb5325",
   },
 ];
 
