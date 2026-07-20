@@ -22,8 +22,6 @@ import {
   FaTrash,
   FaToggleOn,
   FaToggleOff,
-  FaShoppingCart,
-  FaTimes,
 } from "react-icons/fa";
 import "./MyAccount.css";
 import products from "../data/products";
@@ -34,7 +32,7 @@ import { useShop } from "../context/ShopContext";
 const MyAccount = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [activeAdminTab, setActiveAdminTab] = useState("dashboard");
-  const { wishlist, removeFromWishlist, addToCart } = useShop();
+  const { wishlist, clearWishlist } = useShop();
 
   const user = {
     name: "John Doe",
