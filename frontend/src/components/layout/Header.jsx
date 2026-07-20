@@ -13,6 +13,7 @@ import {
   FaTshirt,
   FaBlender,
   FaTimes,
+  FaCog,
 } from "react-icons/fa";
 import categories from "../../data/categories";
 import { useShop } from "../../context/ShopContext";
@@ -116,10 +117,20 @@ const Header = () => {
             >
               <FaSearch />
             </button>
-            <Link to="/my-account" className="d_icon_btn d-none d-md-flex">
-              <FaUser />
-              <span className="d_icon_label">Account</span>
-            </Link>
+            <Dropdown className="d-none d-md-flex">
+              <Dropdown.Toggle as="button" className="d_icon_btn">
+                <FaUser />
+                <span className="d_icon_label">Account</span>
+              </Dropdown.Toggle>
+              <Dropdown.Menu className="d_account_dropdown">
+                <Dropdown.Item as={Link} to="/my-account">
+                  <FaUser /> My Account
+                </Dropdown.Item>
+                <Dropdown.Item as={Link} to="/admin-panel">
+                  <FaCog /> Admin Panel
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
 
             <Link to="/cart" className="d_icon_btn">
               <span className="d_icon_wrap">
@@ -231,7 +242,8 @@ const Header = () => {
             <li><NavLink to="/about" onClick={() => setShowMobileMenu(false)}>About</NavLink></li>
             <li><NavLink to="/blog" onClick={() => setShowMobileMenu(false)}>Blog</NavLink></li>
             <li><NavLink to="/contact" onClick={() => setShowMobileMenu(false)}>Contact</NavLink></li>
-            <li><NavLink to="/my-account" onClick={() => setShowMobileMenu(false)}>My Account</NavLink></li>
+            <li><NavLink to="/my-account" onClick={() => setShowMobileMenu(false)}><FaUser /> My Account</NavLink></li>
+            <li><NavLink to="/admin-panel" onClick={() => setShowMobileMenu(false)}><FaCog /> Admin Panel</NavLink></li>
             <li><NavLink to="/login" onClick={() => setShowMobileMenu(false)}>Login / Register</NavLink></li>
           </ul>
         </Offcanvas.Body>

@@ -242,6 +242,40 @@
   padding: 0;
 }
 
+/* ===== Account Dropdown ===== */
+.d_account_dropdown {
+  min-width: 180px;
+  border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-md);
+  box-shadow: var(--d-shadow-lg);
+  padding: 8px 0;
+  margin-top: 8px;
+}
+
+.d_account_dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  color: var(--d-text);
+  font-size: 14px;
+  transition: var(--d-transition);
+}
+
+.d_account_dropdown .dropdown-item:hover {
+  background: var(--d-bg);
+  color: var(--d-primary);
+}
+
+.d_account_dropdown .dropdown-item svg {
+  font-size: 14px;
+  color: var(--d-text-muted);
+}
+
+.d_account_dropdown .dropdown-item:hover svg {
+  color: var(--d-primary);
+}
+
 /* ===== Nav Bar / Mega Menu ===== */
 .d_nav_bar {
   background: var(--d-primary);

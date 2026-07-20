@@ -13,6 +13,7 @@ import Appliances from "../pages/Appliances";
 import ProductDetail from "../pages/ProductDetail";
 import MyOrders from "../pages/MyOrders";
 import MyAccount from "../pages/MyAccount";
+import AdminPanel from "../pages/AdminPanel";
 import PolicyPage from "../pages/PolicyPage";
 import FAQ from "../pages/FAQ";
 import ComingSoon from "../pages/ComingSoon";
@@ -37,6 +38,7 @@ const AppRoutes = () => {
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/my-account" element={<MyAccount />} />
+      <Route path="/admin-panel" element={<AdminPanel />} />
       <Route path="/privacy-policy" element={<PolicyPage policyType="privacy" />} />
       <Route path="/terms-conditions" element={<PolicyPage policyType="terms" />} />
       <Route path="/refund-policy" element={<PolicyPage policyType="refund" />} />

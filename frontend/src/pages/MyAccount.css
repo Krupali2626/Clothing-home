@@ -76,6 +76,13 @@
   color: var(--d-primary);
 }
 
+/* Override Bootstrap nav-pills default blue color */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  background-color: var(--d-primary) !important;
+  color: var(--d-white) !important;
+}
+
 .d_myaccount_sidebar_divider {
   height: 1px;
   background: var(--d-border);
@@ -224,17 +231,17 @@
 }
 
 .d_status_delivered {
-  background: #d1fae5;
+  background: #d1fae5 !important;
   color: #059669;
 }
 
 .d_status_shipped {
-  background: #dbeafe;
+  background: #dbeafe !important;
   color: #2563eb;
 }
 
 .d_status_processing {
-  background: #fef3c7;
+  background: #fef3c7 !important;
   color: #d97706;
 }
 
