@@ -102,7 +102,7 @@ const Contact = () => {
         <div className="container">
           <Row className="g-3">
             {contactDetails.map((c, i) => (
-              <Col key={i} xs={6} md={3}>
+              <Col key={i}  xs={12} sm={6} md={6} lg={3}>
                 <div className="d_contact_info_card">
                   <div className="d_contact_icon">{c.icon}</div>
                   <h6>{c.title}</h6>

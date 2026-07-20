@@ -13,23 +13,28 @@ import blogs from "../data/blogs";
 import "./Blog.css";
 
 const CATEGORIES = ["All", "Fashion", "Appliances"];
+const ALL_TAGS = ["Style", "Fashion", "Appliances", "Home", "Guide", "Tips", "Winter", "Summer", "Kitchen"];
 
 const Blog = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState(null);
 
   const filtered = useMemo(() => {
     let list = [...blogs];
     if (activeCategory !== "All")
       list = list.filter((b) => b.category === activeCategory);
+    if (activeTag)
+      list = list.filter((b) => (b.tags || []).includes(activeTag));
     if (search.trim())
       list = list.filter(
         (b) =>
           b.title.toLowerCase().includes(search.toLowerCase()) ||
-          b.excerpt.toLowerCase().includes(search.toLowerCase())
+          b.excerpt.toLowerCase().includes(search.toLowerCase()) ||
+          (b.tags || []).some(tag => tag.toLowerCase().includes(search.toLowerCase()))
       );
     return list;
-  }, [activeCategory, search]);
+  }, [activeCategory, activeTag, search]);
 
   const featured = blogs[0];
   const popular = blogs.filter((b) => b.popular).slice(0, 4);
@@ -87,7 +92,10 @@ const Blog = () => {
                   <button
                     key={c}
                     className={`d_blog_cat_btn ${activeCategory === c ? "active" : ""}`}
-                    onClick={() => setActiveCategory(c)}
+                    onClick={() => {
+                      setActiveCategory(c);
+                      setActiveTag(null);
+                    }}
                   >
                     {c}
                   </button>
@@ -101,6 +109,28 @@ const Blog = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
+              </div>
+            </div>
+
+            {/* Tags filter */}
+            <div className="d_blog_tags_filter">
+              <div className="d_blog_tags_filter_label">Filter by tags:</div>
+              <div className="d_blog_tags_list">
+                <button
+                  className={`d_tag_chip ${!activeTag ? "active" : ""}`}
+                  onClick={() => setActiveTag(null)}
+                >
+                  All
+                </button>
+                {ALL_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    className={`d_tag_chip ${activeTag === tag ? "active" : ""}`}
+                    onClick={() => setActiveTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -200,11 +230,15 @@ const Blog = () => {
               <div className="d_sidebar_widget">
                 <h5 className="d_sidebar_title">Tags</h5>
                 <div className="d_sidebar_tags">
-                  {["Style", "Fashion", "Appliances", "Home", "Guide", "Tips", "Winter", "Summer", "Kitchen"].map(
-                    (tag) => (
-                      <span key={tag} className="d_tag_chip">{tag}</span>
-                    )
-                  )}
+                  {ALL_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      className={`d_tag_chip ${activeTag === tag ? "active" : ""}`}
+                      onClick={() => setActiveTag(tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

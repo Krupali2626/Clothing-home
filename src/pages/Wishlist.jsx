@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
 import {
@@ -10,21 +10,16 @@ import {
   FaChevronRight,
   FaShareAlt,
 } from "react-icons/fa";
-import { trendingProducts, latestProducts } from "../data/products";
+import { latestProducts } from "../data/products";
 import ProductCard from "../components/common/ProductCard";
+import { useShop } from "../context/ShopContext";
 import "./Wishlist.css";
 
-const INITIAL_WISHLIST = trendingProducts.slice(0, 6);
-
 const Wishlist = () => {
-  const [items, setItems] = useState(INITIAL_WISHLIST);
+  const { wishlist, removeFromWishlist, clearWishlist, addToCart } = useShop();
+  const suggested = latestProducts.filter((p) => !wishlist.find((i) => i.id === p.id)).slice(0, 4);
 
-  const removeItem = (id) => setItems((prev) => prev.filter((p) => p.id !== id));
-  const clearAll = () => setItems([]);
-
-  const suggested = latestProducts.filter((p) => !items.find((i) => i.id === p.id)).slice(0, 4);
-
-  if (items.length === 0) {
+  if (wishlist.length === 0) {
     return (
       <div className="d_wishlist_empty container d_section">
         <FaHeart className="d_wishlist_empty_icon" />
@@ -48,7 +43,7 @@ const Wishlist = () => {
         </ol>
         <div className="d_wishlist_title_row">
           <h1 className="d_cart_heading">
-            My Wishlist <span>({items.length} items)</span>
+            My Wishlist <span>({wishlist.length} items)</span>
           </h1>
           <div className="d_wishlist_actions">
             <button className="d_wishlist_action_btn" aria-label="Share wishlist">
@@ -56,7 +51,7 @@ const Wishlist = () => {
             </button>
             <button
               className="d_wishlist_action_btn d_wishlist_clear"
-              onClick={clearAll}
+              onClick={clearWishlist}
             >
               <FaTrash /> Clear All
             </button>
@@ -66,13 +61,13 @@ const Wishlist = () => {
 
       <div className="container d_section pt-3">
         <Row className="g-3 g-md-4">
-          {items.map((product) => (
+          {wishlist.map((product) => (
             <Col key={product.id} xs={6} sm={4} md={4} lg={3}>
               <div className="d_wishlist_card">
                 {/* Remove button */}
                 <button
                   className="d_wishlist_remove_btn"
-                  onClick={() => removeItem(product.id)}
+                  onClick={() => removeFromWishlist(product.id)}
                   aria-label="Remove from wishlist"
                 >
                   <FaTrash />
@@ -127,6 +122,7 @@ const Wishlist = () => {
                     className="d_btn_add_cart d_wishlist_cart_btn"
                     type="button"
                     disabled={product.stock === 0}
+                    onClick={() => addToCart(product)}
                   >
                     <FaShoppingCart />
                     {product.stock === 0 ? "Notify Me" : "Add to Cart"}

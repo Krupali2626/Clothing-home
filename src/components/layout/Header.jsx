@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Container, Offcanvas, Dropdown, Badge } from "react-bootstrap";
 import {
   FaSearch,
@@ -15,21 +15,40 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import categories from "../../data/categories";
+import { useShop } from "../../context/ShopContext";
 import "./Header.css";
 
 const clothingCats = categories.filter((c) => c.type === "clothing");
 const applianceCats = categories.filter((c) => c.type === "appliances");
 
 const Header = () => {
+  const navigate = useNavigate();
+  const { globalSearch, setGlobalSearch, wishlist, cart } = useShop();
   const [scrolled, setScrolled] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
+  const [searchCategory, setSearchCategory] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      if (searchCategory === "clothing") {
+        navigate(`/clothing?search=${encodeURIComponent(searchInput)}`);
+      } else if (searchCategory === "appliances") {
+        navigate(`/appliances?search=${encodeURIComponent(searchInput)}`);
+      } else {
+        navigate(`/clothing?search=${encodeURIComponent(searchInput)}`);
+      }
+      setGlobalSearch(searchInput);
+    }
+  };
 
   return (
     <header className={`d_header ${scrolled ? "d_header_scrolled" : ""}`}>
@@ -45,15 +64,6 @@ const Header = () => {
             <a href="tel:+911234567890">
               <FaPhoneAlt /> +91 12345 67890
             </a>
-            <Dropdown align="end">
-              <Dropdown.Toggle as="span" className="d_top_bar_lang">
-                EN <FaChevronDown size={9} />
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item href="#">English</Dropdown.Item>
-                <Dropdown.Item href="#">हिंदी</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
           </div>
         </Container>
       </div>
@@ -76,45 +86,45 @@ const Header = () => {
             </span>
           </Link>
 
-          <div className="d_search_bar d-none d-lg-flex">
+          <form onSubmit={handleSearchSubmit} className="d_search_bar d-none d-lg-flex">
             <Dropdown>
               <Dropdown.Toggle as="button" className="d_search_cat_btn">
-                All Categories <FaChevronDown size={10} />
+                {searchCategory === "clothing" ? "Clothing" : searchCategory === "appliances" ? "Home Appliances" : "All Categories"} <FaChevronDown size={10} />
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                <Dropdown.Item href="#">Clothing</Dropdown.Item>
-                <Dropdown.Item href="#">Home Appliances</Dropdown.Item>
+                <Dropdown.Item onClick={() => setSearchCategory("all")}>All Categories</Dropdown.Item>
+                <Dropdown.Item onClick={() => setSearchCategory("clothing")}>Clothing</Dropdown.Item>
+                <Dropdown.Item onClick={() => setSearchCategory("appliances")}>Home Appliances</Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
-            <input type="text" placeholder="Search for products, brands and more…" />
-            <button className="d_search_submit_btn" aria-label="Search">
+            <input 
+              type="text" 
+              placeholder="Search for products, brands and more…" 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit" className="d_search_submit_btn" aria-label="Search">
               <FaSearch />
             </button>
-          </div>
+          </form>
 
           <div className="d_header_actions">
             <button
               className="d_icon_btn d-lg-none"
-              onClick={() => setSearchOpenMobile((s) => !s)}
+              onClick={() => setSearchOpenMobile((o) => !o)}
               aria-label="Toggle search"
             >
               <FaSearch />
             </button>
-            <Link to="/login" className="d_icon_btn d-none d-md-flex">
+            <Link to="/my-account" className="d_icon_btn d-none d-md-flex">
               <FaUser />
               <span className="d_icon_label">Account</span>
             </Link>
-            <Link to="/wishlist" className="d_icon_btn">
-              <span className="d_icon_wrap">
-                <FaHeart />
-                <Badge className="d_icon_badge" bg="">3</Badge>
-              </span>
-              <span className="d_icon_label d-none d-md-inline">Wishlist</span>
-            </Link>
+
             <Link to="/cart" className="d_icon_btn">
               <span className="d_icon_wrap">
                 <FaShoppingCart />
-                <Badge className="d_icon_badge" bg="">2</Badge>
+                <Badge className="d_icon_badge" bg="">{cart.reduce((sum, item) => sum + item.qty, 0)}</Badge>
               </span>
               <span className="d_icon_label d-none d-md-inline">Cart</span>
             </Link>
@@ -122,12 +132,18 @@ const Header = () => {
         </Container>
 
         {searchOpenMobile && (
-          <div className="d_mobile_search d-lg-none">
-            <input type="text" placeholder="Search products…" autoFocus />
-            <button aria-label="Search">
+          <form onSubmit={handleSearchSubmit} className="d_mobile_search d-lg-none">
+            <input 
+              type="text" 
+              placeholder="Search products…" 
+              autoFocus 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit" aria-label="Search">
               <FaSearch />
             </button>
-          </div>
+          </form>
         )}
       </div>
 
@@ -215,6 +231,7 @@ const Header = () => {
             <li><NavLink to="/about" onClick={() => setShowMobileMenu(false)}>About</NavLink></li>
             <li><NavLink to="/blog" onClick={() => setShowMobileMenu(false)}>Blog</NavLink></li>
             <li><NavLink to="/contact" onClick={() => setShowMobileMenu(false)}>Contact</NavLink></li>
+            <li><NavLink to="/my-account" onClick={() => setShowMobileMenu(false)}>My Account</NavLink></li>
             <li><NavLink to="/login" onClick={() => setShowMobileMenu(false)}>Login / Register</NavLink></li>
           </ul>
         </Offcanvas.Body>

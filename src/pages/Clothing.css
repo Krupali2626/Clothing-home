@@ -257,6 +257,7 @@
   gap: 7px;
   color: var(--d-text-muted);
   font-size: 13px;
+  width: 178px;
 }
 
 .d_sort_select {
@@ -311,7 +312,7 @@
   width: 200px;
   min-width: 200px;
   aspect-ratio: unset;
-  height: 180px;
+  /* height: 180px; */
 }
 
 /* ===== Filter Offcanvas ===== */
@@ -361,5 +362,9 @@
   }
   .d_search_inline {
     display: none;
+  }
+  .d_list_view .d_product_media {
+    width: 150px;
+    min-width: 150px;
   }
 }

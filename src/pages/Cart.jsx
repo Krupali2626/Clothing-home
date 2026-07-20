@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
@@ -15,31 +16,14 @@ import {
 } from "react-icons/fa";
 import { trendingProducts } from "../data/products";
 import ProductCard from "../components/common/ProductCard";
+import { useShop } from "../context/ShopContext";
 import "./Cart.css";
 
-// Sample cart seeded with products from data
-const INITIAL_CART = trendingProducts.slice(0, 3).map((p) => ({
-  ...p,
-  qty: 1,
-  selectedSize: p.sizes ? p.sizes[2] : null,
-  selectedColor: p.colors ? p.colors[0] : null,
-}));
-
 const Cart = () => {
-  const [cart, setCart] = useState(INITIAL_CART);
+  const { cart, updateCartQty, removeFromCart } = useShop();
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState("");
-
-  const updateQty = (id, delta) => {
-    setCart((c) =>
-      c.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-      )
-    );
-  };
-
-  const removeItem = (id) => setCart((c) => c.filter((item) => item.id !== id));
 
   const subtotal = cart.reduce((sum, item) => sum + item.salePrice * item.qty, 0);
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
@@ -124,11 +108,11 @@ const Cart = () => {
                   <div className="d_cart_item_qty">
                     <span className="d_cart_label">Qty</span>
                     <div className="d_qty_control">
-                      <button onClick={() => updateQty(item.id, -1)} aria-label="Decrease">
+                      <button onClick={() => updateCartQty(item.id, -1)} aria-label="Decrease">
                         <FaMinus />
                       </button>
                       <span>{item.qty}</span>
-                      <button onClick={() => updateQty(item.id, 1)} aria-label="Increase">
+                      <button onClick={() => updateCartQty(item.id, 1)} aria-label="Increase">
                         <FaPlus />
                       </button>
                     </div>
@@ -141,7 +125,7 @@ const Cart = () => {
 
                   <button
                     className="d_cart_remove"
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeFromCart(item.id)}
                     aria-label="Remove item"
                   >
                     <FaTrash />
@@ -215,7 +199,7 @@ const Cart = () => {
           <div className="d_cart_suggested">
             <div className="d_section_title_wrap">
               <div>
-                <span className="d_section_eyebrow">You Might Like</span>
+                <span className="d_section_eyebrow">You May Also Like</span>
                 <h2 className="d_section_title">Recommended for You</h2>
               </div>
             </div>

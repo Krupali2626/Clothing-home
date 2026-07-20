@@ -47,12 +47,16 @@
   color: var(--d-accent-light);
 }
 
-.d_top_bar_lang {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: rgba(248, 250, 252, 0.85);
+.d_top_bar_right a.dropdown-item {
+  color: var(--d-text);
+}
+
+.dropdown-toggle::after {
+  display: none !important;
+}
+
+.dropdown-item:hover {
+  background-color: #e2e7ed;
 }
 
 /* ===== Main Header ===== */
@@ -202,7 +206,7 @@
   background: transparent;
   color: var(--d-text);
   font-size: 18px;
-  padding: 8px 10px;
+  padding: 8px;
   border-radius: var(--d-radius-md);
   transition: var(--d-transition);
 }
@@ -361,5 +365,8 @@
   }
   .d_logo {
     font-size: 21px;
+  }
+  .d_main_header_inner {
+    gap: 12px;
   }
 }

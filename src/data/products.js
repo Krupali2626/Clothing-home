@@ -227,6 +227,7 @@ const applianceNames = [
 ];
 
 function buildClothingProducts() {
+  const clothingCategorySlugs = ["men", "women", "kids", "winter-wear", "summer-wear", "shoes", "bags", "accessories"];
   return clothingNames.map((name, i) => {
     const price = 799 + i * 260;
     const discount = [10, 15, 20, 25, 30][i % 5];
@@ -235,7 +236,7 @@ function buildClothingProducts() {
     return {
       id: `clothing-${i + 1}`,
       name,
-      category: "Clothing",
+      category: clothingCategorySlugs[i % clothingCategorySlugs.length],
       type: "clothing",
       brand: clothingBrands[i % clothingBrands.length],
       mrp: Math.round(price / (1 - discount / 100)),
@@ -264,6 +265,7 @@ function buildClothingProducts() {
 }
 
 function buildApplianceProducts() {
+  const applianceCategorySlugs = ["kitchen", "tv", "refrigerator", "washing-machine", "microwave", "air-conditioner", "fans", "mixer", "iron", "water-purifier", "vacuum-cleaner", "small-appliances"];
   return applianceNames.map((name, i) => {
     const price = 6999 + i * 3200;
     const discount = [10, 15, 20, 25, 30][i % 5];
@@ -272,7 +274,7 @@ function buildApplianceProducts() {
     return {
       id: `appliances-${i + 1}`,
       name,
-      category: "Home Appliances",
+      category: applianceCategorySlugs[i % applianceCategorySlugs.length],
       type: "appliances",
       brand: applianceBrands[i % applianceBrands.length],
       mrp: Math.round(price / (1 - discount / 100)),
