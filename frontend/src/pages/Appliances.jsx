@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Row, Col, Form, Offcanvas, Badge } from "react-bootstrap";
 import {
@@ -10,13 +10,9 @@ import {
 } from "react-icons/fa";
 import ProductCard from "../components/common/ProductCard";
 import GoogleAdBanner from "../components/common/GoogleAdBanner";
-import products from "../data/products";
-import categories from "../data/categories";
+import { useShop } from "../context/ShopContext";
 import "./Clothing.css"; // shared listing styles
 import "./Appliances.css";
-
-const applianceCats = categories.filter((c) => c.type === "appliances");
-const applianceProducts = products.filter((p) => p.type === "appliances");
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -27,7 +23,6 @@ const SORT_OPTIONS = [
   { value: "discount", label: "Biggest Discount" },
 ];
 
-const BRANDS = [...new Set(applianceProducts.map((p) => p.brand))];
 const PRICE_RANGES = [
   { label: "Under ₹5,000", min: 0, max: 4999 },
   { label: "₹5,000 – ₹15,000", min: 5000, max: 14999 },
@@ -49,28 +44,50 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
-const FilterPanel = ({ filters, setFilters }) => {
+const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
+  const handleBrand = (brand) => {
+    setFilters((f) => ({
+      ...f,
+      brands: f.brands.includes(brand)
+        ? f.brands.filter((b) => b !== brand)
+        : [...f.brands, brand],
+    }));
+  };
+
+  const handlePrice = (range) => {
+    setFilters((f) => ({
+      ...f,
+      priceRange: f.priceRange === range ? null : range,
+    }));
+  };
+
+  const handleRating = (r) => {
+    setFilters((f) => ({ ...f, minRating: f.minRating === r ? 0 : r }));
+  };
+
+  const handleCategory = (slug) => {
+    setFilters((f) => ({
+      ...f,
+      categories: f.categories.includes(slug)
+        ? f.categories.filter((x) => x !== slug)
+        : [...f.categories, slug],
+    }));
+  };
+
   return (
     <div className="d_filter_panel">
       <FilterSection title="Category">
         <ul className="d_filter_list">
-          {applianceCats.map((c) => (
+          {categories.map((c) => (
             <li key={c.id}>
               <label className="d_filter_checkbox">
                 <input
                   type="checkbox"
                   checked={filters.categories.includes(c.slug)}
-                  onChange={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      categories: f.categories.includes(c.slug)
-                        ? f.categories.filter((x) => x !== c.slug)
-                        : [...f.categories, c.slug],
-                    }))
-                  }
+                  onChange={() => handleCategory(c.slug)}
                 />
                 <span>{c.name}</span>
-                <small>{c.count}</small>
+                <small>{c.count || 0}</small>
               </label>
             </li>
           ))}
@@ -79,20 +96,13 @@ const FilterPanel = ({ filters, setFilters }) => {
 
       <FilterSection title="Brand">
         <ul className="d_filter_list">
-          {BRANDS.map((b) => (
+          {brands.map((b) => (
             <li key={b}>
               <label className="d_filter_checkbox">
                 <input
                   type="checkbox"
                   checked={filters.brands.includes(b)}
-                  onChange={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      brands: f.brands.includes(b)
-                        ? f.brands.filter((x) => x !== b)
-                        : [...f.brands, b],
-                    }))
-                  }
+                  onChange={() => handleBrand(b)}
                 />
                 <span>{b}</span>
               </label>
@@ -110,12 +120,7 @@ const FilterPanel = ({ filters, setFilters }) => {
                   type="radio"
                   name="price"
                   checked={filters.priceRange === r.label}
-                  onChange={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      priceRange: f.priceRange === r.label ? null : r.label,
-                    }))
-                  }
+                  onChange={() => handlePrice(r.label)}
                 />
                 <span>{r.label}</span>
               </label>
@@ -131,9 +136,7 @@ const FilterPanel = ({ filters, setFilters }) => {
               type="radio"
               name="rating"
               checked={filters.minRating === r}
-              onChange={() =>
-                setFilters((f) => ({ ...f, minRating: f.minRating === r ? 0 : r }))
-              }
+              onChange={() => handleRating(r)}
             />
             <span>
               {"★".repeat(r)}{"☆".repeat(5 - r)} & above
@@ -166,7 +169,9 @@ const FilterPanel = ({ filters, setFilters }) => {
 };
 
 const Appliances = () => {
+  const { products, loading, fetchProducts, categories: apiCategories, fetchCategories } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const initCategory = searchParams.get("category") || "";
   const initSort = searchParams.get("sort") || "featured";
   const initFilter = searchParams.get("filter") || "";
@@ -182,6 +187,23 @@ const Appliances = () => {
   });
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [search, setSearch] = useState(initSearch);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const applianceCats = useMemo(() => apiCategories.filter((c) => c.type === "appliance"), [apiCategories]);
+  const applianceProducts = useMemo(() => products.filter((p) => p.type === "appliance"), [products]);
+
+  const BRANDS = useMemo(() => [...new Set(applianceProducts.map((p) => p.brand || "").filter(Boolean))], [applianceProducts]);
+
+  // Fetch products from API when component mounts
+  useEffect(() => {
+    const filters = { type: "appliance" };
+    if (initCategory) filters.category = initCategory;
+    if (initSearch) filters.search = initSearch;
+    fetchProducts(filters);
+  }, []);
 
   // Update URL when search changes
   const handleSearchChange = (e) => {
@@ -264,7 +286,7 @@ const Appliances = () => {
 
         <div className="d_listing_layout">
           <aside className="d_sidebar d-none d-lg-block">
-            <FilterPanel filters={filters} setFilters={setFilters} />
+            <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} />
           </aside>
 
           <div className="d_listing_main">
@@ -352,7 +374,7 @@ const Appliances = () => {
           </button>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          <FilterPanel filters={filters} setFilters={setFilters} />
+          <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} />
         </Offcanvas.Body>
       </Offcanvas>
     </div>

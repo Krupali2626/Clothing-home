@@ -1,20 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaChevronRight, FaBoxOpen, FaTruck, FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
-import { trendingProducts } from "../data/products";
+import { orderAPI } from "../services/api";
+import { useShop } from "../context/ShopContext";
 import "./MyOrders.css";
 
-const STATUSES = ["All", "Delivered", "Shipped", "Processing", "Cancelled"];
-
-const sampleOrders = trendingProducts.slice(0, 6).map((p, i) => ({
-  orderId: `DST-2026-${1000 + i}`,
-  product: p,
-  qty: 1 + (i % 2),
-  status: ["Delivered", "Shipped", "Processing", "Delivered", "Cancelled", "Delivered"][i],
-  date: `2026-0${(i % 6) + 1}-1${i + 1}`,
-  total: p.salePrice * (1 + (i % 2)),
-  tracking: `IN${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-}));
+const STATUSES = ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
 
 const STATUS_ICONS = {
   Delivered: <FaCheckCircle className="d_status_icon d_status_delivered" />,
@@ -26,8 +17,49 @@ const STATUS_ICONS = {
 const MyOrders = () => {
   const [activeStatus, setActiveStatus] = useState("All");
   const [search, setSearch] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { isAuthenticated } = useShop();
 
-  const filtered = sampleOrders.filter((o) => {
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const res = await orderAPI.getMyOrders();
+        const mapped = (res.orders || []).map((o) => {
+          const firstItem = (o.items && o.items[0]) || {};
+          const totalQty = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
+          return {
+            orderId: o.orderNumber || o._id,
+            date: o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "",
+            status: o.status || "Pending",
+            product: {
+              id: firstItem.product || "",
+              name: firstItem.name || "Unknown Product",
+              image: firstItem.image || "",
+              brand: "",
+            },
+            qty: totalQty || firstItem.quantity || 1,
+            total: o.totalPrice || o.itemsPrice || 0,
+            tracking: "",
+          };
+        });
+        if (active) setOrders(mapped);
+      } catch (err) {
+        if (active) setError("Failed to load orders.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [isAuthenticated]);
+
+  const filtered = orders.filter((o) => {
     const matchStatus = activeStatus === "All" || o.status === activeStatus;
     const matchSearch =
       !search.trim() ||
@@ -35,6 +67,26 @@ const MyOrders = () => {
       o.product.name.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="d_orders_page">
+        <div className="container d_section text-center">
+          <p>Loading orders…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="d_orders_page">
+        <div className="container d_section text-center">
+          <p className="text-danger">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="d_orders_page">

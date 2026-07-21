@@ -14,6 +14,7 @@ import {
   FaBlender,
   FaTimes,
   FaCog,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import categories from "../../data/categories";
 import { useShop } from "../../context/ShopContext";
@@ -24,12 +25,17 @@ const applianceCats = categories.filter((c) => c.type === "appliances");
 
 const Header = () => {
   const navigate = useNavigate();
-  const { globalSearch, setGlobalSearch, wishlist, cart } = useShop();
+  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout } = useShop();
   const [scrolled, setScrolled] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
   const [searchCategory, setSearchCategory] = useState("all");
   const [searchInput, setSearchInput] = useState("");
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -117,28 +123,49 @@ const Header = () => {
             >
               <FaSearch />
             </button>
-            <Dropdown className="d-none d-md-flex">
-              <Dropdown.Toggle as="button" className="d_icon_btn">
-                <FaUser />
-                <span className="d_icon_label">Account</span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="d_account_dropdown">
-                <Dropdown.Item as={Link} to="/my-account">
-                  <FaUser /> My Account
-                </Dropdown.Item>
-                <Dropdown.Item as={Link} to="/admin-panel">
-                  <FaCog /> Admin Panel
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+            {isAuthenticated ? (
+              <Dropdown className="d-none d-md-flex">
+                <Dropdown.Toggle as="button" className="d_icon_btn">
+                  <FaUser />
+                  <span className="d_icon_label">Account</span>
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="d_account_dropdown">
+                  <Dropdown.Item as={Link} to="/my-account">
+                    <FaUser /> My Account
+                  </Dropdown.Item>
+                  {user?.role === "admin" && (
+                    <Dropdown.Item as={Link} to="/admin-panel">
+                      <FaCog /> Admin Panel
+                    </Dropdown.Item>
+                  )}
+                  <Dropdown.Item as={Link} to="/login" onClick={handleLogout}>
+                    <FaSignOutAlt /> Logout
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            ) : (
+              <Dropdown className="d-none d-md-flex">
+                <Dropdown.Toggle as="button" className="d_icon_btn">
+                  <FaUser />
+                  <span className="d_icon_label">Account</span>
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="d_account_dropdown">
+                  <Dropdown.Item as={Link} to="/login">
+                    <FaUser /> Login / Register
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            )}
 
-            <Link to="/cart" className="d_icon_btn">
-              <span className="d_icon_wrap">
-                <FaShoppingCart />
-                <Badge className="d_icon_badge" bg="">{cart.reduce((sum, item) => sum + item.qty, 0)}</Badge>
-              </span>
-              <span className="d_icon_label d-none d-md-inline">Cart</span>
-            </Link>
+            {isAuthenticated && (
+              <Link to="/cart" className="d_icon_btn">
+                <span className="d_icon_wrap">
+                  <FaShoppingCart />
+                  <Badge className="d_icon_badge" bg="">{cart.reduce((sum, item) => sum + item.qty, 0)}</Badge>
+                </span>
+                <span className="d_icon_label d-none d-md-inline">Cart</span>
+              </Link>
+            )}
           </div>
         </Container>
 
@@ -242,9 +269,17 @@ const Header = () => {
             <li><NavLink to="/about" onClick={() => setShowMobileMenu(false)}>About</NavLink></li>
             <li><NavLink to="/blog" onClick={() => setShowMobileMenu(false)}>Blog</NavLink></li>
             <li><NavLink to="/contact" onClick={() => setShowMobileMenu(false)}>Contact</NavLink></li>
-            <li><NavLink to="/my-account" onClick={() => setShowMobileMenu(false)}><FaUser /> My Account</NavLink></li>
-            <li><NavLink to="/admin-panel" onClick={() => setShowMobileMenu(false)}><FaCog /> Admin Panel</NavLink></li>
-            <li><NavLink to="/login" onClick={() => setShowMobileMenu(false)}>Login / Register</NavLink></li>
+            {isAuthenticated ? (
+              <>
+                <li><NavLink to="/my-account" onClick={() => setShowMobileMenu(false)}><FaUser /> My Account</NavLink></li>
+                {user?.role === "admin" && (
+                  <li><NavLink to="/admin-panel" onClick={() => setShowMobileMenu(false)}><FaCog /> Admin Panel</NavLink></li>
+                )}
+                <li><button className="d_mobile_nav_link" onClick={() => { handleLogout(); setShowMobileMenu(false); }}><FaSignOutAlt /> Logout</button></li>
+              </>
+            ) : (
+              <li><NavLink to="/login" onClick={() => setShowMobileMenu(false)}>Login / Register</NavLink></li>
+            )}
           </ul>
         </Offcanvas.Body>
       </Offcanvas>

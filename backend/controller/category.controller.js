@@ -1,4 +1,5 @@
 const { Category } = require("../model");
+const { toCategoryObject } = require("../utils/transform");
 
 // @desc    Get all categories
 // @route   GET /api/categories
@@ -9,7 +10,11 @@ exports.getAllCategories = async (req, res) => {
     if (type) filter.type = type;
     if (status) filter.status = status;
     const categories = await Category.find(filter).sort({ createdAt: -1 });
-    res.json({ success: true, count: categories.length, categories });
+    res.json({
+      success: true,
+      count: categories.length,
+      categories: categories.map((c) => toCategoryObject(c)),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -68,7 +73,7 @@ exports.deleteCategory = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Category not found" });
-    res.json({ success: true, message: "Category deleted" });
+    res.json({ success: true, category: toCategoryObject(category) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

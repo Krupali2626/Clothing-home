@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col, Nav, Tab, Table, Badge, Card, Modal, Form, Button } from "react-bootstrap";
 import {
@@ -21,12 +21,15 @@ import {
   FaAngleDown,
   FaTimes,
   FaSave,
+  FaList,
 } from "react-icons/fa";
 import "./AdminPanel.css";
 import "./AdminPanelForms.css";
+import { productAPI, categoryAPI } from "../services/api";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Mock data
   const stats = [
@@ -44,13 +47,9 @@ const AdminPanel = () => {
     { id: "ORD12341", customer: "Tom Brown", date: "16 Jul 2024", total: 899, status: "Delivered" },
   ]);
 
-  const [products, setProducts] = useState([
-    { id: 1, name: "Men's Casual Shirt", category: "Clothing", price: 1299, stock: 45, status: "Active", image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=60&h=60&fit=crop" },
-    { id: 2, name: "Women's Summer Dress", category: "Clothing", price: 1899, stock: 32, status: "Active", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=60&h=60&fit=crop" },
-    { id: 3, name: "Smart TV 43 inch", category: "Appliances", price: 24999, stock: 12, status: "Active", image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=60&h=60&fit=crop" },
-    { id: 4, name: "Wireless Headphones", category: "Appliances", price: 2999, stock: 28, status: "Inactive", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=60&h=60&fit=crop" },
-    { id: 5, name: "Kids T-Shirt", category: "Clothing", price: 599, stock: 67, status: "Active", image: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=60&h=60&fit=crop" },
-  ]);
+  // Products + categories are fetched from the backend (dynamic)
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const [users, setUsers] = useState([
     { id: 1, name: "John Doe", email: "john@example.com", role: "Customer", joined: "Jan 2024", status: "Active" },
@@ -58,6 +57,34 @@ const AdminPanel = () => {
     { id: 3, name: "Admin User", email: "admin@store.com", role: "Admin", joined: "Dec 2023", status: "Active" },
     { id: 4, name: "Mike Johnson", email: "mike@example.com", role: "Customer", joined: "Mar 2024", status: "Inactive" },
   ]);
+
+  // Fetch products + categories from backend
+  const loadProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const res = await productAPI.getAllProducts({ limit: 100 });
+      setProducts(res.products || []);
+    } catch (err) {
+      console.error("Failed to load products:", err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const res = await categoryAPI.getAllCategories();
+      setCategories(res.categories || []);
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Modal state
   const [modal, setModal] = useState({ type: null, mode: null, data: null });
@@ -82,34 +109,42 @@ const AdminPanel = () => {
   const openAdd = (type) => {
     const empty =
       type === "product"
-        ? { name: "", category: "Clothing", price: "", stock: "", status: "Active", image: "" }
+        ? { name: "", category: categories[0]?._id || "", price: "", discountPrice: "", stock: "", status: "active", image: "", type: "clothing", brand: "" }
         : { name: "", email: "", role: "Customer", status: "Active" };
     setForm(empty);
     openModal(type, "add");
   };
 
   const openEdit = (type, item) => {
-    setForm({ ...item });
+    const looksLikeObjectId = /^[0-9a-fA-F]{24}$/.test(item.category || "");
+    const categoryId = looksLikeObjectId ? item.category : categories.find((c) => c.slug === item.category || c.name === item.category)?._id || "";
+    setForm({ ...item, category: categoryId });
     openModal(type, "edit", item);
   };
 
-  const handleSave = (type) => {
+  const handleSave = async (type) => {
     if (type === "product") {
       const payload = {
-        ...form,
+        name: form.name,
         price: Number(form.price) || 0,
+        discountPrice: Number(form.discountPrice) || 0,
         stock: Number(form.stock) || 0,
-        image: form.image || "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=60&h=60&fit=crop",
+        status: form.status || "active",
+        category: form.category,
+        type: form.type || "clothing",
+        brand: form.brand || "",
+        images: form.image ? [form.image] : [],
       };
-      if (modal.data) {
-        setProducts((prev) =>
-          prev.map((p) => (p.id === modal.data.id ? { ...p, ...payload } : p))
-        );
-      } else {
-        setProducts((prev) => [
-          { ...payload, id: Date.now() },
-          ...prev,
-        ]);
+      try {
+        if (modal.data && modal.data.id) {
+          await productAPI.updateProduct(modal.data.id, payload);
+        } else {
+          await productAPI.createProduct(payload);
+        }
+        await loadProducts();
+      } catch (err) {
+        console.error("Failed to save product:", err);
+        alert("Failed to save product: " + (err.message || "Server error"));
       }
     } else if (type === "user") {
       if (modal.data) {
@@ -126,9 +161,60 @@ const AdminPanel = () => {
     closeModal();
   };
 
-  const handleDelete = (type, id) => {
-    if (type === "product") setProducts((prev) => prev.filter((p) => p.id !== id));
-    else if (type === "user") setUsers((prev) => prev.filter((u) => u.id !== id));
+  const handleDelete = async (type, id) => {
+    if (type === "product") {
+      if (!window.confirm("Delete this product?")) return;
+      try {
+        await productAPI.deleteProduct(id);
+        await loadProducts();
+      } catch (err) {
+        console.error("Failed to delete product:", err);
+        alert("Failed to delete product: " + (err.message || "Server error"));
+      }
+    } else if (type === "user") {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+    } else if (type === "category") {
+      if (!window.confirm("Delete this category?")) return;
+      try {
+        await categoryAPI.deleteCategory(id);
+        await loadCategories();
+        await loadProducts();
+      } catch (err) {
+        console.error("Failed to delete category:", err);
+        alert("Failed to delete category: " + (err.message || "Server error"));
+      }
+    }
+  };
+
+  const openCategoryModal = (mode, data = null) => {
+    const empty = { name: "", slug: "", type: "clothing", image: "", description: "", status: "active" };
+    setForm(mode === "add" ? empty : { ...data });
+    openModal("category", mode, data);
+  };
+
+  const handleCategorySave = async () => {
+    if (!form.name.trim()) { alert("Category name is required"); return; }
+    try {
+      const payload = {
+        name: form.name,
+        slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        type: form.type || "clothing",
+        image: form.image || "",
+        description: form.description || "",
+        status: form.status || "active",
+      };
+      if (modal.mode === "edit" && modal.data?._id) {
+        await categoryAPI.updateCategory(modal.data._id, payload);
+      } else {
+        await categoryAPI.createCategory(payload);
+      }
+      await loadCategories();
+      await loadProducts();
+      closeModal();
+    } catch (err) {
+      console.error("Failed to save category:", err);
+      alert("Failed to save category: " + (err.message || "Server error"));
+    }
   };
 
   const isView = modal.mode === "view";
@@ -175,6 +261,11 @@ const AdminPanel = () => {
                   <Nav.Item>
                     <Nav.Link eventKey="products" className={`d_admin_sidebar_link ${activeTab === "products" ? "active" : ""}`}>
                       <FaBox /> Products
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="categories" className={`d_admin_sidebar_link ${activeTab === "categories" ? "active" : ""}`}>
+                      <FaList /> Categories
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
@@ -355,35 +446,100 @@ const AdminPanel = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {products.map((product) => (
-                                <tr key={product.id}>
-                                  <td>
-                                    <img src={product.image} alt={product.name} className="d_admin_product_img" />
-                                  </td>
-                                  <td>{product.name}</td>
-                                  <td>{product.category}</td>
-                                  <td>₹{product.price.toLocaleString("en-IN")}</td>
-                                  <td>{product.stock}</td>
-                                  <td>
-                                    <Badge className={product.status === "Active" ? "d_status_active" : "d_status_inactive"}>
-                                      {product.status}
-                                    </Badge>
-                                  </td>
-                                  <td>
-                                    <div className="d_table_actions">
-                                      <button className="d_table_action_btn" title="View" onClick={() => openModal("product", "view", product)}>
-                                        <FaEye />
-                                      </button>
-                                      <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("product", product)}>
-                                        <FaEdit />
-                                      </button>
-                                      <button className="d_table_action_btn d_table_action_btn_delete" title="Delete" onClick={() => handleDelete("product", product.id)}>
-                                        <FaTrash />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
+                              {loadingProducts ? (
+                                <tr><td colSpan={7} className="text-center">Loading products…</td></tr>
+                              ) : products.length === 0 ? (
+                                <tr><td colSpan={7} className="text-center">No products found.</td></tr>
+                              ) : (
+                                products.map((product) => (
+                                  <tr key={product.id}>
+                                    <td>
+                                      <img src={product.image} alt={product.name} className="d_admin_product_img" />
+                                    </td>
+                                    <td>{product.name}</td>
+                                    <td>{product.category}</td>
+                                    <td>₹{(product.salePrice || product.price || 0).toLocaleString("en-IN")}</td>
+                                    <td>{product.stock}</td>
+                                    <td>
+                                      <Badge className={(product.status || "active") === "active" ? "d_status_active" : "d_status_inactive"}>
+                                        {(product.status || "active").charAt(0).toUpperCase() + (product.status || "active").slice(1)}
+                                      </Badge>
+                                    </td>
+                                    <td>
+                                      <div className="d_table_actions">
+                                        <button className="d_table_action_btn" title="View" onClick={() => openModal("product", "view", product)}>
+                                          <FaEye />
+                                        </button>
+                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("product", product)}>
+                                          <FaEdit />
+                                        </button>
+                                        <button className="d_table_action_btn d_table_action_btn_delete" title="Delete" onClick={() => handleDelete("product", product.id)}>
+                                          <FaTrash />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+                  </Tab.Pane>
+
+                  {/* Categories Tab */}
+                  <Tab.Pane eventKey="categories">
+                    <div className="d_myaccount_card">
+                      <div className="d_myaccount_card_header">
+                        <h4>Categories</h4>
+                        <button className="d_btn_primary" onClick={() => openCategoryModal("add")}>
+                          <FaPlus /> Add Category
+                        </button>
+                      </div>
+                      <div className="d_myaccount_card_body">
+                        <div className="d_table_wrapper">
+                          <Table className="d_admin_table">
+                            <thead>
+                              <tr>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Slug</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {categories.length === 0 ? (
+                                <tr><td colSpan={6} className="text-center">No categories found.</td></tr>
+                              ) : (
+                                categories.map((cat) => (
+                                  <tr key={cat.id}>
+                                    <td>
+                                      <img src={cat.image} alt={cat.name} className="d_admin_product_img" />
+                                    </td>
+                                    <td>{cat.name}</td>
+                                    <td>{cat.slug}</td>
+                                    <td>{cat.type}</td>
+                                    <td>
+                                      <Badge className={(cat.status || "active") === "active" ? "d_status_active" : "d_status_inactive"}>
+                                        {(cat.status || "active").charAt(0).toUpperCase() + (cat.status || "active").slice(1)}
+                                      </Badge>
+                                    </td>
+                                    <td>
+                                      <div className="d_table_actions">
+                                        <button className="d_table_action_btn" title="Edit" onClick={() => openCategoryModal("edit", cat)}>
+                                          <FaEdit />
+                                        </button>
+                                        <button className="d_table_action_btn d_table_action_btn_delete" title="Delete" onClick={() => handleDelete("category", cat._id || cat.id)}>
+                                          <FaTrash />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
                             </tbody>
                           </Table>
                         </div>
@@ -549,10 +705,10 @@ const AdminPanel = () => {
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Category</Form.Label>
                   <Form.Select name="category" value={form.category || ""} onChange={handleFormChange}>
-                    <option>Clothing</option>
-                    <option>Appliances</option>
-                    <option>Footwear</option>
-                    <option>Accessories</option>
+                    {categories.length === 0 && <option value="">No categories</option>}
+                    {categories.map((c) => (
+                      <option key={c.id} value={c._id}>{c.name}</option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
                 <Row className="g-3">
@@ -564,8 +720,84 @@ const AdminPanel = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
+                      <Form.Label>Discount Price (₹)</Form.Label>
+                      <Form.Control type="number" name="discountPrice" value={form.discountPrice || ""} onChange={handleFormChange} placeholder="0" />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group className="d_admin_form_group">
                       <Form.Label>Stock</Form.Label>
                       <Form.Control type="number" name="stock" value={form.stock || ""} onChange={handleFormChange} placeholder="0" />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="d_admin_form_group">
+                      <Form.Label>Type</Form.Label>
+                      <Form.Select name="type" value={form.type || "clothing"} onChange={handleFormChange}>
+                        <option value="clothing">Clothing</option>
+                        <option value="appliance">Appliance</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="d_admin_form_group">
+                  <Form.Label>Brand</Form.Label>
+                  <Form.Control name="brand" value={form.brand || ""} onChange={handleFormChange} placeholder="Brand name" />
+                </Form.Group>
+                <Form.Group className="d_admin_form_group">
+                  <Form.Label>Image URL</Form.Label>
+                  <Form.Control name="image" value={form.image || ""} onChange={handleFormChange} placeholder="https://..." />
+                </Form.Group>
+                <Form.Group className="d_admin_form_group">
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select name="status" value={form.status || "active"} onChange={handleFormChange}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </Form.Select>
+                </Form.Group>
+              </Form>
+            )
+          )}
+
+          {/* CATEGORY FORM */}
+          {modal.type === "category" && (
+            isView ? (
+              <div className="d_admin_view_grid">
+                <div className="d_admin_view_row"><span>Name</span><strong>{modal.data?.name}</strong></div>
+                <div className="d_admin_view_row"><span>Slug</span><strong>{modal.data?.slug}</strong></div>
+                <div className="d_admin_view_row"><span>Type</span><strong>{modal.data?.type}</strong></div>
+                <div className="d_admin_view_row"><span>Status</span><strong>{modal.data?.status}</strong></div>
+              </div>
+            ) : (
+              <Form className="d_admin_form">
+                <Form.Group className="d_admin_form_group">
+                  <Form.Label>Category Name</Form.Label>
+                  <Form.Control name="name" value={form.name || ""} onChange={handleFormChange} placeholder="e.g. T-Shirts" />
+                </Form.Group>
+                <Form.Group className="d_admin_form_group">
+                  <Form.Label>Slug</Form.Label>
+                  <Form.Control name="slug" value={form.slug || ""} onChange={handleFormChange} placeholder="auto-generated if left blank" />
+                  <small className="text-muted">Leave blank to auto-generate from name</small>
+                </Form.Group>
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group className="d_admin_form_group">
+                      <Form.Label>Type</Form.Label>
+                      <Form.Select name="type" value={form.type || "clothing"} onChange={handleFormChange}>
+                        <option value="clothing">Clothing</option>
+                        <option value="appliance">Appliance</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="d_admin_form_group">
+                      <Form.Label>Status</Form.Label>
+                      <Form.Select name="status" value={form.status || "active"} onChange={handleFormChange}>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </Form.Select>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -574,11 +806,8 @@ const AdminPanel = () => {
                   <Form.Control name="image" value={form.image || ""} onChange={handleFormChange} placeholder="https://..." />
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
-                  <Form.Label>Status</Form.Label>
-                  <Form.Select name="status" value={form.status || ""} onChange={handleFormChange}>
-                    <option>Active</option>
-                    <option>Inactive</option>
-                  </Form.Select>
+                  <Form.Label>Description</Form.Label>
+                  <Form.Control as="textarea" rows={3} name="description" value={form.description || ""} onChange={handleFormChange} placeholder="Brief description..." />
                 </Form.Group>
               </Form>
             )
@@ -670,7 +899,7 @@ const AdminPanel = () => {
             {isView ? "Close" : "Cancel"}
           </Button>
           {!isView && (
-            <Button className="d_admin_btn_save" onClick={() => handleSave(modal.type)}>
+            <Button className="d_admin_btn_save" onClick={() => modal.type === "category" ? handleCategorySave() : handleSave(modal.type)}>
               <FaSave /> {modal.mode === "add" ? "Create" : "Update"}
             </Button>
           )}

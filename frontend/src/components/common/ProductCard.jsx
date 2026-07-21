@@ -18,11 +18,12 @@ const ProductCard = ({ product }) => {
     badge,
     stock,
   } = product;
-  const { addToWishlist, removeFromWishlist, isInWishlist, openQuickView, addToCart } = useShop();
+  const { addToWishlist, removeFromWishlist, isInWishlist, openQuickView, addToCart, requireAuth } = useShop();
 
   const handleWishlistClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!requireAuth()) return;
     if (isInWishlist(id)) {
       removeFromWishlist(id);
     } else {
@@ -37,6 +38,7 @@ const ProductCard = ({ product }) => {
   };
 
   const handleAddToCart = () => {
+    if (!requireAuth()) return;
     addToCart(product);
   };
 
