@@ -44,6 +44,17 @@ const Login = () => {
     setSubmitted(true);
   };
 
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    setSubmitted(false);
+    setErrors({});
+    setForgotEmail("");
+    setShowPassword(false);
+    setLoginForm({ email: "", password: "" });
+    setRegForm({ name: "", email: "", phone: "", password: "", agree: false })
+    setForgotEmail("");
+  }
+
   const handleForgotSubmit = (e) => {
     e.preventDefault();
     if (!forgotEmail.trim()) { setErrors({ forgot: "Enter your email" }); return; }

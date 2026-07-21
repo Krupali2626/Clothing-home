@@ -45,7 +45,7 @@ const Footer = () => {
       <div className="d_footer_main">
         <Container fluid className="d_container_fluid">
           <Row className="g-4">
-            <Col lg={4} md={6}>
+            <Col lg={4} md={6} className="mb-3">
               <Link to="/" className="d_logo d_footer_logo">
                 <span className="d_logo_mark">D</span>
                 <span className="d_logo_text">.Store</span>
@@ -68,7 +68,7 @@ const Footer = () => {
               </div>
             </Col>
 
-            <Col lg={2} md={6}>
+            <Col xs={6} md={6} lg={2}>
               <h6 className="d_footer_heading">Quick Links</h6>
               <ul className="d_footer_links">
                 <li><Link to="/">Home</Link></li>
@@ -79,7 +79,7 @@ const Footer = () => {
               </ul>
             </Col>
 
-            <Col lg={3} md={6}>
+            <Col xs={6} md={6} lg={2}>
               <h6 className="d_footer_heading">Categories</h6>
               <ul className="d_footer_links">
                 <li><Link to="/clothing?category=men">Men's Fashion</Link></li>
@@ -90,7 +90,7 @@ const Footer = () => {
               </ul>
             </Col>
 
-            <Col lg={3} md={6}>
+            <Col md={6} lg={2}>
               <h6 className="d_footer_heading">Information</h6>
               <ul className="d_footer_links">
                 <li><Link to="/privacy-policy">Privacy Policy</Link></li>

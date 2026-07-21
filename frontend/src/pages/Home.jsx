@@ -54,7 +54,7 @@ const Home = () => {
       </div>
 
       {/* Hero Slider */}
-      <section className=" d_hero_section">
+      <section className=" d_hero_section px-3">
         <HeroSlider />
       </section>
 
@@ -132,7 +132,7 @@ const Home = () => {
 
       {/* Latest Products */}
       <section className=" d_section d_bg_alt">
-<div className="container">
+        <div className="container">
           <SectionHeader
           eyebrow="Just Arrived"
           title="Latest Products"
@@ -146,7 +146,7 @@ const Home = () => {
             </Col>
           ))}
         </Row>
-</div>
+        </div>
       </section>
 
       {/* Best Sellers */}

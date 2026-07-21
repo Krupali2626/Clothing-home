@@ -88,7 +88,7 @@ const Header = () => {
           </Link>
 
           <form onSubmit={handleSearchSubmit} className="d_search_bar d-none d-lg-flex">
-            <Dropdown>
+            {/* <Dropdown>
               <Dropdown.Toggle as="button" className="d_search_cat_btn">
                 {searchCategory === "clothing" ? "Clothing" : searchCategory === "appliances" ? "Home Appliances" : "All Categories"} <FaChevronDown size={10} />
               </Dropdown.Toggle>
@@ -97,7 +97,7 @@ const Header = () => {
                 <Dropdown.Item onClick={() => setSearchCategory("clothing")}>Clothing</Dropdown.Item>
                 <Dropdown.Item onClick={() => setSearchCategory("appliances")}>Home Appliances</Dropdown.Item>
               </Dropdown.Menu>
-            </Dropdown>
+            </Dropdown> */}
             <input 
               type="text" 
               placeholder="Search for products, brands and more…" 

@@ -363,7 +363,7 @@
 /* Responsive */
 @media (max-width: 767px) {
   .d_cart_item {
-    grid-template-columns: 1fr 40px;
+    grid-template-columns: 1fr 126px;
     grid-template-rows: auto auto auto auto;
   }
 

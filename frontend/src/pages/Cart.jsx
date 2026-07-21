@@ -144,7 +144,7 @@ const Cart = () => {
                 value={coupon}
                 onChange={(e) => { setCoupon(e.target.value); setCouponError(""); }}
               />
-              <button onClick={handleCoupon} className="d_btn_primary">Apply</button>
+              <button onClick={handleCoupon} className="d_btn_primary shadow-none">Apply</button>
             </div>
             {couponApplied && (
               <p className="d_coupon_success">Coupon applied — 10% off!</p>
@@ -182,7 +182,7 @@ const Cart = () => {
                 <strong>₹{total.toLocaleString("en-IN")}</strong>
               </div>
 
-              <Link to="/login" className="d_btn_primary d_checkout_btn">
+              <Link to="/login" className="d_btn_primary d_checkout_btn shadow-none">
                 Proceed to Checkout <FaArrowRight size={12} />
               </Link>
 
