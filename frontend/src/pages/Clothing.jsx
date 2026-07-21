@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Row, Col, Form, Offcanvas, Badge } from "react-bootstrap";
 import {
@@ -10,12 +10,9 @@ import {
 } from "react-icons/fa";
 import ProductCard from "../components/common/ProductCard";
 import GoogleAdBanner from "../components/common/GoogleAdBanner";
-import products from "../data/products";
-import categories from "../data/categories";
+import { useShop } from "../context/ShopContext";
 import "./Clothing.css";
 
-const clothingCats = categories.filter((c) => c.type === "clothing");
-const clothingProducts = products.filter((p) => p.type === "clothing");
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -26,7 +23,6 @@ const SORT_OPTIONS = [
   { value: "discount", label: "Biggest Discount" },
 ];
 
-const BRANDS = [...new Set(clothingProducts.map((p) => p.brand))];
 const PRICE_RANGES = [
   { label: "Under ₹1,000", min: 0, max: 999 },
   { label: "₹1,000 – ₹2,000", min: 1000, max: 1999 },
@@ -48,7 +44,7 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
-const FilterPanel = ({ filters, setFilters }) => {
+const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
   const handleBrand = (brand) => {
     setFilters((f) => ({
       ...f,
@@ -69,27 +65,29 @@ const FilterPanel = ({ filters, setFilters }) => {
     setFilters((f) => ({ ...f, minRating: f.minRating === r ? 0 : r }));
   };
 
+  const handleCategory = (slug) => {
+    setFilters((f) => ({
+      ...f,
+      categories: f.categories.includes(slug)
+        ? f.categories.filter((x) => x !== slug)
+        : [...f.categories, slug],
+    }));
+  };
+
   return (
     <div className="d_filter_panel">
       <FilterSection title="Category">
         <ul className="d_filter_list">
-          {clothingCats.map((c) => (
+          {categories.map((c) => (
             <li key={c.id}>
               <label className="d_filter_checkbox">
                 <input
                   type="checkbox"
                   checked={filters.categories.includes(c.slug)}
-                  onChange={() =>
-                    setFilters((f) => ({
-                      ...f,
-                      categories: f.categories.includes(c.slug)
-                        ? f.categories.filter((x) => x !== c.slug)
-                        : [...f.categories, c.slug],
-                    }))
-                  }
+                  onChange={() => handleCategory(c.slug)}
                 />
                 <span>{c.name}</span>
-                <small>{c.count}</small>
+                <small>{c.count || 0}</small>
               </label>
             </li>
           ))}
@@ -98,7 +96,7 @@ const FilterPanel = ({ filters, setFilters }) => {
 
       <FilterSection title="Brand">
         <ul className="d_filter_list">
-          {BRANDS.map((b) => (
+          {brands.map((b) => (
             <li key={b}>
               <label className="d_filter_checkbox">
                 <input
@@ -171,7 +169,9 @@ const FilterPanel = ({ filters, setFilters }) => {
 };
 
 const Clothing = () => {
+  const { products, loading, fetchProducts, categories: apiCategories, fetchCategories } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const initCategory = searchParams.get("category") || "";
   const initSort = searchParams.get("sort") || "featured";
   const initFilter = searchParams.get("filter") || "";
@@ -188,6 +188,23 @@ const Clothing = () => {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [search, setSearch] = useState(initSearch);
 
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const clothingCats = useMemo(() => apiCategories.filter((c) => c.type === "clothing"), [apiCategories]);
+
+  // Get unique brands from products
+  const brands = [...new Set(products.map((p) => p.brand || "").filter(Boolean))];
+
+  // Fetch products from API when component mounts or filters change
+  useEffect(() => {
+    const filters = { type: "clothing" };
+    if (initCategory) filters.category = initCategory;
+    if (initSearch) filters.search = initSearch;
+    fetchProducts(filters);
+  }, []);
+
   // Update URL when search changes
   const handleSearchChange = (e) => {
     const newSearch = e.target.value;
@@ -201,8 +218,10 @@ const Clothing = () => {
     }
   };
 
+ 
+
   const filtered = useMemo(() => {
-    let list = [...clothingProducts];
+    let list = [...products];
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
     if (filters.categories.length)
@@ -218,7 +237,7 @@ const Clothing = () => {
       const searchLower = search.toLowerCase();
       list = list.filter((p) => 
         p.name.toLowerCase().includes(searchLower) || 
-        p.brand.toLowerCase().includes(searchLower)
+        p.brand?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -230,7 +249,7 @@ const Clothing = () => {
       case "discount": return list.sort((a, b) => b.discount - a.discount);
       default: return list;
     }
-  }, [filters, sort, search, initFilter]);
+  }, [filters, sort, search, initFilter, products]);
 
   const activeFilterCount =
     filters.categories.length +
@@ -238,6 +257,16 @@ const Clothing = () => {
     (filters.priceRange ? 1 : 0) +
     (filters.minRating ? 1 : 0) +
     (filters.inStock ? 1 : 0);
+
+  if (loading && products.length === 0) {
+    return (
+      <div className="d_listing_page">
+        <div className="container d_section text-center">
+          <p>Loading products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="d_listing_page">
@@ -271,7 +300,7 @@ const Clothing = () => {
         <div className="d_listing_layout">
           {/* Sidebar (desktop) */}
           <aside className="d_sidebar d-none d-lg-block">
-            <FilterPanel filters={filters} setFilters={setFilters} />
+            <FilterPanel filters={filters} setFilters={setFilters} brands={brands} categories={clothingCats} />
           </aside>
 
           {/* Main content */}
@@ -364,7 +393,7 @@ const Clothing = () => {
           </button>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          <FilterPanel filters={filters} setFilters={setFilters} />
+          <FilterPanel filters={filters} setFilters={setFilters} brands={brands} categories={clothingCats} />
         </Offcanvas.Body>
       </Offcanvas>
     </div>

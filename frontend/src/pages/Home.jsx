@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
 import { FaArrowRight, FaBolt } from "react-icons/fa";
@@ -14,21 +14,11 @@ import BlogCard from "../components/common/BlogCard";
 import FlashSaleTimer from "../components/common/FlashSaleTimer";
 import GoogleAdBanner from "../components/common/GoogleAdBanner";
 
-import categories from "../data/categories";
-import {
-  trendingProducts,
-  flashSaleProducts,
-  latestProducts,
-  bestSellerProducts,
-} from "../data/products";
+import { useShop } from "../context/ShopContext";
 import reviews from "../data/reviews";
 import blogs from "../data/blogs";
 
 import "./Home.css";
-
-const featuredCategories = categories.slice(0, 10);
-const featuredReviews = reviews.slice(0, 6);
-const latestBlogs = blogs.slice(0, 4);
 
 const SectionHeader = ({ eyebrow, title, subtitle, to }) => (
   <div className="d_section_title_wrap">
@@ -46,6 +36,25 @@ const SectionHeader = ({ eyebrow, title, subtitle, to }) => (
 );
 
 const Home = () => {
+  const { products, categories: apiCategories, fetchProducts, fetchCategories } = useShop();
+
+  // Fetch products and categories from API on component mount
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, [fetchProducts, fetchCategories]);
+
+  // Use API categories if available
+  const displayCategories = apiCategories.length > 0 ? apiCategories.slice(0, 10) : [];
+
+  const featuredReviews = reviews.slice(0, 6);
+  const latestBlogs = blogs.slice(0, 4);
+  const trendingProducts = products.slice(0, 6);
+  const flashSaleProducts = products.filter((p) => p.discount >= 15).slice(0, 6);
+  const latestProducts = products.slice(0, 6);
+  const bestSellerProducts = products.slice(0, 6);
+  const featuredCategories = displayCategories;
+
   return (
     <main className="d_home_page ">
       {/* Top Banner Ad */}

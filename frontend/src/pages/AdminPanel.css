@@ -17,7 +17,7 @@
 
 .d_admin_sidebar_profile {
   padding: 24px;
-  background: linear-gradient(135deg, var(--d-primary), var(--d-secondary));
+  background: var(--d-primary);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -172,7 +172,7 @@
 .d_stat_card {
   flex: 1;
   min-width: 200px;
-  background: linear-gradient(135deg, var(--d-primary), var(--d-primary-light));
+  background: var(--d-primary);
   border-radius: var(--d-radius-lg);
   padding: 24px;
   color: var(--d-white);
@@ -296,13 +296,13 @@
 }
 
 .d_table_action_btn:hover {
-  background: var(--d-primary);
+  background: var(--d-primary) !important;
   border-color: var(--d-primary);
   color: var(--d-white);
 }
 
 .d_table_action_btn_delete:hover {
-  background: var(--d-danger);
+  background: var(--d-danger) !important;
   border-color: var(--d-danger);
   color: var(--d-white);
 }
@@ -310,7 +310,7 @@
 /* Status Badges */
 .d_status_delivered,
 .d_status_active {
-  background: #d1fae5;
+  background: #d1fae5 !important;
   color: #059669;
   padding: 6px 12px;
   border-radius: var(--d-radius-pill);
@@ -346,7 +346,7 @@
 }
 
 .d_status_inactive {
-  background: #fee2e2;
+  background: #fee2e2 !important;
   color: #dc2626;
   padding: 6px 12px;
   border-radius: var(--d-radius-pill);

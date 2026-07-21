@@ -16,7 +16,7 @@ import { useShop } from "../../context/ShopContext";
 import "./QuickView.css";
 
 const QuickView = () => {
-  const { quickViewProduct, closeQuickView, addToWishlist, isInWishlist, removeFromWishlist, addToCart } = useShop();
+  const { quickViewProduct, closeQuickView, addToWishlist, isInWishlist, removeFromWishlist, addToCart, requireAuth } = useShop();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
@@ -24,6 +24,7 @@ const QuickView = () => {
   if (!quickViewProduct) return null;
 
   const handleWishlist = () => {
+    if (!requireAuth()) return;
     if (isInWishlist(quickViewProduct.id)) {
       removeFromWishlist(quickViewProduct.id);
     } else {
@@ -32,6 +33,7 @@ const QuickView = () => {
   };
 
   const handleAddToCart = () => {
+    if (!requireAuth()) return;
     addToCart(quickViewProduct, quantity, selectedSize, selectedColor);
     closeQuickView();
   };

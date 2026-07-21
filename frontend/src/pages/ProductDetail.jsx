@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Row, Col, Badge } from "react-bootstrap";
 import {
@@ -17,13 +17,18 @@ import {
 } from "react-icons/fa";
 import ProductCard from "../components/common/ProductCard";
 import ReviewCard from "../components/common/ReviewCard";
-import products from "../data/products";
+import productsData from "../data/products";
 import reviews from "../data/reviews";
+import { productAPI } from "../services/api";
+import { useShop } from "../context/ShopContext";
 import "./ProductDetail.css";
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const product = products.find((p) => p.id === id);
+  const { products, addToCart, addToWishlist, isInWishlist, removeFromWishlist, requireAuth } = useShop();
+
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [selectedImg, setSelectedImg] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -31,6 +36,32 @@ const ProductDetail = () => {
   const [activeTab, setActiveTab] = useState("description");
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await productAPI.getProductById(id);
+        if (active) setProduct(res.product);
+      } catch (err) {
+        const local = productsData.find((p) => p.id === id);
+        if (active) setProduct(local || null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="d_container_fluid d_section text-center">
+        <p>Loading product…</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -41,6 +72,21 @@ const ProductDetail = () => {
       </div>
     );
   }
+
+  const handleAddToCart = () => {
+    if (!requireAuth()) return;
+    addToCart(product, quantity, selectedSize, selectedColor);
+  };
+
+  const handleWishlist = () => {
+    if (!requireAuth()) return;
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
+    }
+    setWishlist((w) => !w);
+  };
 
   const related = products
     .filter((p) => p.type === product.type && p.id !== product.id)
@@ -206,6 +252,7 @@ const ProductDetail = () => {
                 </div>
                 <button
                   className="d_btn_primary d_detail_cart_btn"
+                  onClick={handleAddToCart}
                   disabled={product.stock === 0}
                 >
                   <FaShoppingCart /> {product.stock === 0 ? "Notify Me" : "Add to Cart"}
@@ -213,7 +260,7 @@ const ProductDetail = () => {
                 <div className="d_detail_wishlist_share">
                 <button
                   className={`d_detail_wishlist_btn ${wishlist ? "active" : ""}`}
-                  onClick={() => setWishlist((w) => !w)}
+                  onClick={handleWishlist}
                   aria-label="Add to wishlist"
                 >
                   <FaHeart />

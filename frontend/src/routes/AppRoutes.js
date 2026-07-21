@@ -8,6 +8,7 @@ import Contact from "../pages/Contact";
 import Login from "../pages/Login";
 import Wishlist from "../pages/Wishlist";
 import Cart from "../pages/Cart";
+import Checkout from "../pages/Checkout";
 import Clothing from "../pages/Clothing";
 import Appliances from "../pages/Appliances";
 import ProductDetail from "../pages/ProductDetail";
@@ -18,10 +19,8 @@ import PolicyPage from "../pages/PolicyPage";
 import FAQ from "../pages/FAQ";
 import ComingSoon from "../pages/ComingSoon";
 import ReviewCard from "../components/common/ReviewCard";
+import ProtectedRoute from "../components/common/ProtectedRoute";
 
-/**
- * Central route table with all available pages linked.
- */
 const AppRoutes = () => {
   return (
     <Routes>
@@ -31,14 +30,9 @@ const AppRoutes = () => {
       <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/wishlist" element={<Wishlist />} />
-      <Route path="/cart" element={<Cart />} />
       <Route path="/clothing" element={<Clothing />} />
       <Route path="/appliances" element={<Appliances />} />
       <Route path="/product/:id" element={<ProductDetail />} />
-      <Route path="/my-orders" element={<MyOrders />} />
-      <Route path="/my-account" element={<MyAccount />} />
-      <Route path="/admin-panel" element={<AdminPanel />} />
       <Route path="/privacy-policy" element={<PolicyPage policyType="privacy" />} />
       <Route path="/terms-conditions" element={<PolicyPage policyType="terms" />} />
       <Route path="/refund-policy" element={<PolicyPage policyType="refund" />} />
@@ -46,6 +40,12 @@ const AppRoutes = () => {
       <Route path="/faq" element={<FAQ />} />
       <Route path="*" element={<ComingSoon />} />
 
+      <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+      <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+      <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+      <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+      <Route path="/my-account" element={<ProtectedRoute><MyAccount /></ProtectedRoute>} />
+      <Route path="/admin-panel" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
     </Routes>
   );
 };

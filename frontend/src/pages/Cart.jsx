@@ -182,7 +182,7 @@ const Cart = () => {
                 <strong>₹{total.toLocaleString("en-IN")}</strong>
               </div>
 
-              <Link to="/login" className="d_btn_primary d_checkout_btn shadow-none">
+              <Link to="/checkout" className="d_btn_primary d_checkout_btn">
                 Proceed to Checkout <FaArrowRight size={12} />
               </Link>
 

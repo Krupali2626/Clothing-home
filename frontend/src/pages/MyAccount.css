@@ -63,8 +63,8 @@
 }
 
 .d_myaccount_sidebar_profile {
-  padding: 32px 24px;
-  background: var(--d-gradient-primary);
+  padding: 24px;
+  background: linear-gradient(135deg, var(--d-primary), var(--d-secondary));
   display: flex;
   align-items: center;
   gap: 20px;
@@ -536,8 +536,8 @@
 
 .d_myaccount_payment_card {
   width: 100%;
-  max-width: 400px;
-  background: var(--d-gradient-primary);
+  max-width: 360px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: var(--d-radius-lg);
   padding: 32px;
   color: var(--d-white);
@@ -695,14 +695,9 @@
   border: 3px solid var(--d-white);
 }
 
-.d_myaccount_profile_image_upload:hover {
-  background: var(--d-secondary);
-  transform: scale(1.1);
-}
-
-/* Order Details View */
-.d_myaccount_order_details_view {
-  background: linear-gradient(180deg, #f8fafc 0%, var(--d-white) 100%);
+.d_stat_card {
+  background: linear-gradient(135deg, var(--d-primary), #7c3aed);
+  padding: 24px;
   border-radius: var(--d-radius-lg);
   padding: 24px;
   border: 2px solid var(--d-border);

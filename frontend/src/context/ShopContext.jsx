@@ -1,27 +1,157 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { productAPI, userAPI, categoryAPI, orderAPI } from "../services/api";
 import { trendingProducts } from "../data/products";
 
-// Initial data
+// Initial data fallback
 const INITIAL_WISHLIST = trendingProducts.slice(0, 6);
-const INITIAL_CART = trendingProducts.slice(0, 3).map((p) => ({
-  ...p,
-  qty: 1,
-  selectedSize: p.sizes ? p.sizes[2] : null,
-  selectedColor: p.colors ? p.colors[0] : null,
-}));
+const INITIAL_CART = [];
 
 const ShopContext = createContext();
 
 export const ShopProvider = ({ children }) => {
   const navigate = useNavigate();
   
-  // State
+  // State - Products & Categories
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // State - Cart & Wishlist
   const [wishlist, setWishlist] = useState(INITIAL_WISHLIST);
   const [cart, setCart] = useState(INITIAL_CART);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [globalSearch, setGlobalSearch] = useState("");
+  
+  // State - User & Auth
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [orders, setOrders] = useState([]);
+
+  // Fetch products from backend
+  const fetchProducts = async (filters = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await productAPI.getAllProducts(filters);
+      setProducts(response.products || []);
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+      setError(err.message);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch categories from backend
+  const fetchCategories = async () => {
+    try {
+      const response = await categoryAPI.getAllCategories();
+      setCategories(response.categories || []);
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
+
+  // Fetch user profile if authenticated
+  const fetchUserProfile = async () => {
+    try {
+      const response = await userAPI.getProfile();
+      setUser(response.user);
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  // Fetch user orders
+  const fetchUserOrders = async () => {
+    try {
+      const response = await orderAPI.getMyOrders();
+      setOrders(response.orders || []);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    }
+  };
+
+  // Initialize on mount
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      fetchUserProfile();
+    }
+  }, []);
+
+  // User Authentication Functions
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      const response = await userAPI.login(credentials);
+      localStorage.setItem("authToken", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      setUser(response.user);
+      setIsAuthenticated(true);
+      navigate("/");
+      return response;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      const response = await userAPI.register(userData);
+      localStorage.setItem("authToken", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      setUser(response.user);
+      setIsAuthenticated(true);
+      navigate("/");
+      return response;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    userAPI.logout();
+    setUser(null);
+    setIsAuthenticated(false);
+    setCart([]);
+    setWishlist([]);
+    setOrders([]);
+    navigate("/");
+  };
+
+  const updateProfile = async (profileData) => {
+    try {
+      setLoading(true);
+      const response = await userAPI.updateProfile(profileData);
+      setUser(response.user);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      return response;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Wishlist functions
   const addToWishlist = (product) => {
@@ -44,7 +174,7 @@ export const ShopProvider = ({ children }) => {
   };
 
   // Cart functions
-  const addToCart = (product, qty = 1, size = null, color = null) => {
+  const addToCart = async (product, qty = 1, size = null, color = null) => {
     setCart((prev) => {
       const exists = prev.find((item) => item.id === product.id);
       if (exists) {
@@ -77,6 +207,26 @@ export const ShopProvider = ({ children }) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  // Order functions
+  const createOrder = async (orderData) => {
+    try {
+      setLoading(true);
+      const response = await orderAPI.createOrder(orderData);
+      await fetchUserOrders();
+      clearCart();
+      return response;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Quick view functions
   const openQuickView = (product) => {
     setQuickViewProduct(product);
@@ -94,21 +244,55 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
+  const requireAuth = () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return false;
+    }
+    return true;
+  };
+
   return (
     <ShopContext.Provider
       value={{
+        // Products & Categories
+        products,
+        categories,
+        loading,
+        error,
+        fetchProducts,
+        fetchCategories,
+        
+        // User & Auth
+        user,
+        isAuthenticated,
+        orders,
+        login,
+        register,
+        logout,
+        updateProfile,
+        fetchUserOrders,
+        requireAuth,
+        
+        // Wishlist
         wishlist,
-        cart,
-        quickViewProduct,
-        globalSearch,
-        setGlobalSearch,
         addToWishlist,
         removeFromWishlist,
         clearWishlist,
         isInWishlist,
+        
+        // Cart
+        cart,
         addToCart,
         updateCartQty,
         removeFromCart,
+        clearCart,
+        createOrder,
+        
+        // Quick View & Search
+        quickViewProduct,
+        globalSearch,
+        setGlobalSearch,
         openQuickView,
         closeQuickView,
         handleGlobalSearch,
@@ -119,4 +303,10 @@ export const ShopProvider = ({ children }) => {
   );
 };
 
-export const useShop = () => useContext(ShopContext);
+export const useShop = () => {
+  const context = useContext(ShopContext);
+  if (!context) {
+    throw new Error("useShop must be used within a ShopProvider");
+  }
+  return context;
+};
