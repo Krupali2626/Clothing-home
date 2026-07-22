@@ -45,7 +45,7 @@ const Home = () => {
   }, [fetchProducts, fetchCategories]);
 
   // Use API categories if available
-  const displayCategories = apiCategories.length > 0 ? apiCategories.slice(0, 10) : [];
+  const displayCategories = apiCategories.length > 0 ? apiCategories.slice(0, 12) : [];
 
   const featuredReviews = reviews.slice(0, 6);
   const latestBlogs = blogs.slice(0, 4);
