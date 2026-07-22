@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Container, Offcanvas, Dropdown, Badge } from "react-bootstrap";
 import {
@@ -17,6 +17,7 @@ import {
   FaSignOutAlt,
 } from "react-icons/fa";
 import categories from "../../data/categories";
+import products from "../../data/products";
 import { useShop } from "../../context/ShopContext";
 import "./Header.css";
 
@@ -31,6 +32,9 @@ const Header = () => {
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
   const [searchCategory, setSearchCategory] = useState("all");
   const [searchInput, setSearchInput] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef(null);
 
   const handleLogout = () => {
     logout();
@@ -41,6 +45,44 @@ const Header = () => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (searchInput.trim().length > 0) {
+      const query = searchInput.toLowerCase().trim();
+      const filtered = products
+        .filter(
+          (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.brand.toLowerCase().includes(query) ||
+            p.category.toLowerCase().includes(query)
+        )
+        .slice(0, 6);
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchInput]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const handleSearchSubmit = (e) => {
@@ -54,7 +96,14 @@ const Header = () => {
         navigate(`/clothing?search=${encodeURIComponent(searchInput)}`);
       }
       setGlobalSearch(searchInput);
+      setShowSuggestions(false);
     }
+  };
+
+  const handleSuggestionClick = (product) => {
+    setShowSuggestions(false);
+    setSearchInput("");
+    navigate(`/product/${product.id}`);
   };
 
   return (
@@ -93,27 +142,47 @@ const Header = () => {
             </span>
           </Link>
 
-          <form onSubmit={handleSearchSubmit} className="d_search_bar d-none d-lg-flex">
-            {/* <Dropdown>
-              <Dropdown.Toggle as="button" className="d_search_cat_btn">
-                {searchCategory === "clothing" ? "Clothing" : searchCategory === "appliances" ? "Home Appliances" : "All Categories"} <FaChevronDown size={10} />
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => setSearchCategory("all")}>All Categories</Dropdown.Item>
-                <Dropdown.Item onClick={() => setSearchCategory("clothing")}>Clothing</Dropdown.Item>
-                <Dropdown.Item onClick={() => setSearchCategory("appliances")}>Home Appliances</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown> */}
-            <input 
-              type="text" 
-              placeholder="Search for products, brands and more…" 
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
-            <button type="submit" className="d_search_submit_btn" aria-label="Search">
-              <FaSearch />
-            </button>
-          </form>
+          <div className="d_search_wrap" ref={searchContainerRef}>
+            <form onSubmit={handleSearchSubmit} className="d_search_bar d-none d-lg-flex">
+              {/* <Dropdown>
+                <Dropdown.Toggle as="button" className="d_search_cat_btn">
+                  {searchCategory === "clothing" ? "Clothing" : searchCategory === "appliances" ? "Home Appliances" : "All Categories"} <FaChevronDown size={10} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setSearchCategory("all")}>All Categories</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSearchCategory("clothing")}>Clothing</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSearchCategory("appliances")}>Home Appliances</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown> */}
+              <input
+                type="text"
+                placeholder="Search for products, brands and more…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                autoComplete="off"
+              />
+              <button type="submit" className="d_search_submit_btn" aria-label="Search">
+                <FaSearch />
+              </button>
+            </form>
+            {showSuggestions && (
+              <div className="d_search_suggestions">
+                {suggestions.map((product) => (
+                  <div
+                    key={product.id}
+                    className="d_search_suggestion_item"
+                    onClick={() => handleSuggestionClick(product)}
+                  >
+                    <div className="d_search_suggestion_info">
+                      <span className="d_search_suggestion_name">{product.name}</span>
+                      <span className="d_search_suggestion_brand">{product.brand}</span>
+                    </div>
+                    <span className="d_search_suggestion_price">₹{product.salePrice.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="d_header_actions">
             <button
@@ -170,18 +239,38 @@ const Header = () => {
         </Container>
 
         {searchOpenMobile && (
-          <form onSubmit={handleSearchSubmit} className="d_mobile_search d-lg-none">
-            <input 
-              type="text" 
-              placeholder="Search products…" 
-              autoFocus 
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
-            <button type="submit" aria-label="Search">
-              <FaSearch />
-            </button>
-          </form>
+          <div className="d_mobile_search_wrap d-lg-none">
+            <form onSubmit={handleSearchSubmit} className="d_mobile_search">
+              <input
+                type="text"
+                placeholder="Search products…"
+                autoFocus
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                autoComplete="off"
+              />
+              <button type="submit" aria-label="Search">
+                <FaSearch />
+              </button>
+            </form>
+            {showSuggestions && (
+              <div className="d_search_suggestions d_search_suggestions_mobile">
+                {suggestions.map((product) => (
+                  <div
+                    key={product.id}
+                    className="d_search_suggestion_item"
+                    onClick={() => handleSuggestionClick(product)}
+                  >
+                    <div className="d_search_suggestion_info">
+                      <span className="d_search_suggestion_name">{product.name}</span>
+                      <span className="d_search_suggestion_brand">{product.brand}</span>
+                    </div>
+                    <span className="d_search_suggestion_price">₹{product.salePrice.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
