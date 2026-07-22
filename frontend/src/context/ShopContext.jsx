@@ -12,22 +12,44 @@ const ShopContext = createContext();
 
 export const ShopProvider = ({ children }) => {
   const navigate = useNavigate();
-  
+   
   // State - Products & Categories
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+   
   // State - Cart & Wishlist
-  const [wishlist, setWishlist] = useState(INITIAL_WISHLIST);
-  const [cart, setCart] = useState(INITIAL_CART);
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      const saved = localStorage.getItem("wishlist");
+      return saved ? JSON.parse(saved) : INITIAL_WISHLIST;
+    } catch {
+      return INITIAL_WISHLIST;
+    }
+  });
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cart");
+      return saved ? JSON.parse(saved) : INITIAL_CART;
+    } catch {
+      return INITIAL_CART;
+    }
+  });
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [globalSearch, setGlobalSearch] = useState("");
-  
+   
   // State - User & Auth
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("authToken"));
+  const [authLoading, setAuthLoading] = useState(true);
   const [orders, setOrders] = useState([]);
 
   // Fetch products from backend
@@ -79,6 +101,16 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  // Persist wishlist to localStorage
+  useEffect(() => {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  }, [wishlist]);
+
   // Initialize on mount
   useEffect(() => {
     fetchProducts();
@@ -87,7 +119,9 @@ export const ShopProvider = ({ children }) => {
     // Check if user is authenticated
     const token = localStorage.getItem("authToken");
     if (token) {
-      fetchUserProfile();
+      fetchUserProfile().finally(() => setAuthLoading(false));
+    } else {
+      setAuthLoading(false);
     }
   }, []);
 

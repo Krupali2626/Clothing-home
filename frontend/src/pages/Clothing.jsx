@@ -74,8 +74,41 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
     }));
   };
 
+  const handleGender = (gender) => {
+    setFilters((f) => {
+      const current = f.gender || [];
+      return {
+        ...f,
+        gender: current.includes(gender) ? current.filter((g) => g !== gender) : [...current, gender],
+      };
+    });
+  };
+
   return (
     <div className="d_filter_panel">
+      <FilterSection title="Gender">
+        <ul className="d_filter_list">
+          {["all", "male", "female"].map((g) => (
+            <li key={g}>
+              <label className="d_filter_checkbox">
+                <input
+                  type="radio"
+                  name="gender"
+                  checked={g === "all" ? !(filters.gender || []).length : (filters.gender || []).includes(g)}
+                  onChange={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      gender: g === "all" ? [] : [g],
+                    }))
+                  }
+                />
+                <span>{g === "all" ? "All" : g === "male" ? "Male" : "Female"}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </FilterSection>
+
       <FilterSection title="Category">
         <ul className="d_filter_list">
           {categories.map((c) => (
@@ -159,7 +192,7 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
       <button
         className="d_filter_clear"
         onClick={() =>
-          setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false })
+          setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false, gender: [] })
         }
       >
         Clear All Filters
@@ -184,6 +217,7 @@ const Clothing = () => {
     priceRange: null,
     minRating: 0,
     inStock: false,
+    gender: [],
   });
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [search, setSearch] = useState(initSearch);
@@ -199,10 +233,19 @@ const Clothing = () => {
 
   // Fetch products from API when component mounts or filters change
   useEffect(() => {
-    const filters = { type: "clothing" };
-    if (initCategory) filters.category = initCategory;
-    if (initSearch) filters.search = initSearch;
-    fetchProducts(filters);
+    const fetchParams = { type: "clothing" };
+    if (initCategory) fetchParams.category = initCategory;
+    if (initSearch) fetchParams.search = initSearch;
+    if (filters.gender.length === 1) fetchParams.gender = filters.gender[0];
+    fetchProducts(fetchParams);
+  }, [filters.gender]);
+
+  // Initial fetch
+  useEffect(() => {
+    const fetchParams = { type: "clothing" };
+    if (initCategory) fetchParams.category = initCategory;
+    if (initSearch) fetchParams.search = initSearch;
+    fetchProducts(fetchParams);
   }, []);
 
   // Update URL when search changes
@@ -224,6 +267,9 @@ const Clothing = () => {
     let list = [...products];
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
+    if (filters.gender.length) {
+      list = list.filter((p) => filters.gender.includes(p.gender));
+    }
     if (filters.categories.length)
       list = list.filter((p) => filters.categories.includes(p.category?.toLowerCase().replace(/\s+/g, "-") || ""));
     if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
@@ -249,9 +295,10 @@ const Clothing = () => {
       case "discount": return list.sort((a, b) => b.discount - a.discount);
       default: return list;
     }
-  }, [filters, sort, search, initFilter, products]);
+  }, [filters, sort, search, initFilter, products, apiCategories]);
 
   const activeFilterCount =
+    (filters.gender?.length ? 1 : 0) +
     filters.categories.length +
     filters.brands.length +
     (filters.priceRange ? 1 : 0) +

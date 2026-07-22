@@ -32,6 +32,7 @@ exports.getAllProducts = async (req, res) => {
       bestSeller,
       flashSale,
       status,
+      gender,
       page = 1,
       limit = 20,
       sort = "-createdAt",
@@ -44,6 +45,7 @@ exports.getAllProducts = async (req, res) => {
     if (bestSeller === "true") filter.bestSeller = true;
     if (flashSale === "true") filter.flashSale = true;
     if (search) filter.$text = { $search: search };
+    if (gender) filter.gender = gender;
 
     if (category) {
       Object.assign(filter, await resolveCategoryFilter(category));

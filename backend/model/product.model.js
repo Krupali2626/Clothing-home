@@ -25,6 +25,11 @@ const productSchema = new mongoose.Schema(
       enum: ["clothing", "appliance"],
       default: "clothing",
     },
+    gender: {
+      type: String,
+      enum: ["male", "female", ""],
+      default: "",
+    },
     brand: { type: String, default: "" },
     price: { type: Number, required: true, min: 0 },
     discountPrice: { type: Number, default: 0 },

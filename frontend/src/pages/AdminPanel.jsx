@@ -109,7 +109,7 @@ const AdminPanel = () => {
   const openAdd = (type) => {
     const empty =
       type === "product"
-        ? { name: "", category: categories[0]?._id || "", price: "", discountPrice: "", stock: "", status: "active", image: "", type: "clothing", brand: "" }
+        ? { name: "", category: categories[0]?._id || "", price: "", discountPrice: "", stock: "", status: "active", image: "", type: "clothing", brand: "", gender: "" }
         : { name: "", email: "", role: "Customer", status: "Active" };
     setForm(empty);
     openModal(type, "add");
@@ -133,6 +133,7 @@ const AdminPanel = () => {
         category: form.category,
         type: form.type || "clothing",
         brand: form.brand || "",
+        gender: form.gender || "",
         images: form.image ? [form.image] : [],
       };
       try {
@@ -692,6 +693,9 @@ const AdminPanel = () => {
                 <img src={modal.data?.image} alt={modal.data?.name} className="d_admin_view_img" />
                 <div className="d_admin_view_row"><span>Name</span><strong>{modal.data?.name}</strong></div>
                 <div className="d_admin_view_row"><span>Category</span><strong>{modal.data?.category}</strong></div>
+                {modal.data?.type === "clothing" && modal.data?.gender && (
+                  <div className="d_admin_view_row"><span>Gender</span><strong>{modal.data.gender === "male" ? "Male" : "Female"}</strong></div>
+                )}
                 <div className="d_admin_view_row"><span>Price</span><strong>₹{Number(modal.data?.price).toLocaleString("en-IN")}</strong></div>
                 <div className="d_admin_view_row"><span>Stock</span><strong>{modal.data?.stock}</strong></div>
                 <div className="d_admin_view_row"><span>Status</span><strong>{modal.data?.status}</strong></div>
@@ -740,6 +744,16 @@ const AdminPanel = () => {
                         <option value="appliance">Appliance</option>
                       </Form.Select>
                     </Form.Group>
+                    {form.type === "clothing" && (
+                      <Form.Group className="d_admin_form_group">
+                        <Form.Label>Gender</Form.Label>
+                        <Form.Select name="gender" value={form.gender || ""} onChange={handleFormChange}>
+                          <option value="">Select Gender</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                        </Form.Select>
+                      </Form.Group>
+                    )}
                   </Col>
                 </Row>
                 <Form.Group className="d_admin_form_group">

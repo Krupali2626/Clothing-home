@@ -16,7 +16,7 @@ import { useShop } from "../context/ShopContext";
 import "./Login.css";
 
 const Login = () => {
-  const { login, register, loading, error } = useShop();
+  const { login, register, loading, error, isAuthenticated, authLoading } = useShop();
   const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,12 +29,10 @@ const Login = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    const user = localStorage.getItem("user");
-    if (token && user) {
+    if (!authLoading && isAuthenticated) {
       navigate("/", { replace: true });
     }
-  }, [navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   const resetErrors = () => {
     setErrors({});

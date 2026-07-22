@@ -38,10 +38,11 @@ const apiCall = async (endpoint, options = {}) => {
 // Product APIs
 export const productAPI = {
   getAllProducts: (filters = {}) => {
-    let query = "";
-    if (filters.search) query += `?search=${filters.search}`;
-    if (filters.category) query += `${query ? "&" : "?"}category=${filters.category}`;
-    if (filters.sort) query += `${query ? "&" : "?"}sort=${filters.sort}`;
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    const query = params.toString() ? `?${params.toString()}` : "";
     return apiCall(`/products${query}`);
   },
   getProductById: (id) => apiCall(`/products/${id}`),
