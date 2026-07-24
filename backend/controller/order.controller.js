@@ -1,5 +1,17 @@
 const { Order, Product } = require("../model");
 
+const STATUS_FLOW = ["pending", "processing", "shipped", "delivered", "cancelled"];
+
+const normalizeStatus = (status) => {
+  if (!status) return null;
+  return String(status).trim().toLowerCase();
+};
+
+const pushStatusHistory = (order, status, note = "") => {
+  if (!order.statusHistory) order.statusHistory = [];
+  order.statusHistory.push({ status, note, at: new Date() });
+};
+
 // @desc    Create new order
 // @route   POST /api/orders
 exports.createOrder = async (req, res) => {
@@ -31,7 +43,6 @@ exports.createOrder = async (req, res) => {
         size: item.size,
         color: item.color,
       });
-      // reduce stock
       product.stock -= item.quantity;
       await product.save();
     }
@@ -47,6 +58,7 @@ exports.createOrder = async (req, res) => {
       itemsPrice,
       shippingPrice,
       totalPrice,
+      paymentStatus: paymentMethod === "cod" ? "pending" : "paid",
     });
 
     res.status(201).json({ success: true, order });
@@ -72,7 +84,7 @@ exports.getAllOrders = async (req, res) => {
   try {
     const { status } = req.query;
     const filter = {};
-    if (status) filter.status = status;
+    if (status && status !== "all") filter.status = normalizeStatus(status);
     const orders = await Order.find(filter)
       .populate("user", "name email")
       .sort({ createdAt: -1 });
@@ -88,6 +100,13 @@ exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("user", "name email");
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    const isOwner = order.user && order.user._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: "Not authorized to view this order" });
+    }
+
     res.json({ success: true, order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -98,14 +117,75 @@ exports.getOrderById = async (req, res) => {
 // @route   PUT /api/orders/:id
 exports.updateOrder = async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    const nextStatus = normalizeStatus(req.body.status);
+    if (nextStatus) {
+      if (!STATUS_FLOW.includes(nextStatus)) {
+        return res.status(400).json({ success: false, message: "Invalid order status" });
+      }
+      if (order.status !== nextStatus) {
+        order.status = nextStatus;
+        pushStatusHistory(order, nextStatus, req.body.note || `Status updated to ${nextStatus}`);
+        if (nextStatus === "delivered") {
+          order.deliveredAt = new Date();
+          order.paymentStatus = order.paymentMethod === "cod" ? "paid" : order.paymentStatus;
+        }
+        if (nextStatus === "cancelled" && order.paymentStatus === "paid") {
+          order.paymentStatus = "refunded";
+        }
+      }
+    }
+
+    if (req.body.paymentStatus) {
+      order.paymentStatus = normalizeStatus(req.body.paymentStatus);
+    }
+    if (req.body.estimatedDelivery) {
+      order.estimatedDelivery = new Date(req.body.estimatedDelivery);
+    }
+
+    await order.save();
+    await order.populate("user", "name email");
     res.json({ success: true, order });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Cancel own order (customer) — only pending/processing
+// @route   PUT /api/orders/:id/cancel
+exports.cancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    const isOwner = order.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: "Not authorized to cancel this order" });
+    }
+
+    if (!["pending", "processing"].includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending or processing orders can be cancelled",
+      });
+    }
+
+    // Restock items
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+    }
+
+    order.status = "cancelled";
+    pushStatusHistory(order, "cancelled", req.body.note || "Cancelled by customer");
+    if (order.paymentStatus === "paid") order.paymentStatus = "refunded";
+    await order.save();
+
+    res.json({ success: true, order, message: "Order cancelled successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

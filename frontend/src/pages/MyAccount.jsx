@@ -1,6 +1,5 @@
-
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Row, Col, Nav, Tab, Modal } from "react-bootstrap";
 import {
   FaUser,
@@ -18,78 +17,96 @@ import {
   FaTimes,
   FaCheck,
   FaCamera,
-  FaTruck,
-  FaShippingFast,
-  FaBoxOpen,
   FaCheckCircle,
 } from "react-icons/fa";
 import "./MyAccount.css";
 import ProductCard from "../components/common/ProductCard";
 import { useShop } from "../context/ShopContext";
+import { userAPI, orderAPI } from "../services/api";
+
+const STATUS_STEPS = ["pending", "processing", "shipped", "delivered"];
+
+const buildTimeline = (order) => {
+  const status = String(order.status || "pending").toLowerCase();
+  const history = order.statusHistory || [];
+  const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+
+  if (status === "cancelled") {
+    const cancelledAt = history.find((h) => h.status === "cancelled")?.at || order.updatedAt;
+    return [
+      { status: "Order Placed", date: createdAt ? createdAt.toLocaleString("en-IN") : "", completed: true },
+      {
+        status: "Cancelled",
+        date: cancelledAt ? new Date(cancelledAt).toLocaleString("en-IN") : "",
+        completed: true,
+      },
+    ];
+  }
+
+  const currentIdx = STATUS_STEPS.indexOf(status);
+  return STATUS_STEPS.map((step, idx) => {
+    const hist = history.find((h) => h.status === step);
+    const labels = {
+      pending: "Order Placed",
+      processing: "Processing",
+      shipped: "Shipped",
+      delivered: "Delivered",
+    };
+    let date = "";
+    if (hist?.at) date = new Date(hist.at).toLocaleString("en-IN");
+    else if (step === "pending" && createdAt) date = createdAt.toLocaleString("en-IN");
+    return {
+      status: labels[step],
+      date,
+      completed: currentIdx >= idx,
+    };
+  });
+};
+
+const formatPaymentMethod = (method) => {
+  const map = { cod: "Cash on Delivery", card: "Card", upi: "UPI", netbanking: "Net Banking" };
+  return map[method] || method || "—";
+};
 
 const MyAccount = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
-  const { wishlist, clearWishlist } = useShop();
+  const { wishlist, clearWishlist, logout } = useShop();
 
-  // Logout Modal State
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
 
-  // Profile State
   const [user, setUser] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 98765 43210",
-    isAdmin: true,
+    name: "",
+    email: "",
+    phone: "",
+    isAdmin: false,
+    role: "customer",
     profileImage: null,
+    dateJoined: "",
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedUser, setEditedUser] = useState({ ...user });
 
-  // Addresses State
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      address: "123, Main Street",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001",
-      phone: "+91 98765 43210",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "John Doe",
-      address: "456, Park Avenue",
-      city: "Pune",
-      state: "Maharashtra",
-      pincode: "411001",
-      phone: "+91 98765 43210",
-      isDefault: false,
-    },
-  ]);
+  const [addresses, setAddresses] = useState([]);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [newAddress, setNewAddress] = useState({
-    name: "",
-    address: "",
+    label: "Home",
+    fullName: "",
+    phone: "",
+    street: "",
     city: "",
     state: "",
     pincode: "",
-    phone: "",
     isDefault: false,
   });
 
-  // Payment Methods State
-  const [paymentMethods, setPaymentMethods] = useState([
-    {
-      id: 1,
-      cardNumber: "•••• •••• •••• 4242",
-      cardName: "John Doe",
-      expiry: "12/26",
-      type: "VISA",
-    },
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [newPayment, setNewPayment] = useState({
     cardNumber: "",
@@ -98,7 +115,6 @@ const MyAccount = () => {
     cvv: "",
   });
 
-  // Password State
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -107,136 +123,9 @@ const MyAccount = () => {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  // Orders State
-  const [orders] = useState([
-    {
-      id: "ORD12345",
-      date: "12 July 2024",
-      status: "Delivered",
-      total: 1999,
-      items: 2,
-      image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&h=100&fit=crop",
-      products: [
-        {
-          name: "Premium Cotton T-Shirt",
-          price: 999,
-          quantity: 1,
-          size: "M",
-          color: "Navy Blue",
-          image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&h=100&fit=crop",
-        },
-        {
-          name: "Classic Denim Jeans",
-          price: 1000,
-          quantity: 1,
-          size: "32",
-          color: "Blue",
-          image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=100&h=100&fit=crop",
-        },
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "123, Main Street",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        phone: "+91 98765 43210",
-      },
-      paymentMethod: "Credit Card (•••• •••• •••• 4242)",
-      deliveryDate: "15 July 2024",
-      trackingNumber: "TRK123456789",
-      timeline: [
-        { status: "Order Placed", date: "12 July 2024, 10:30 AM", completed: true },
-        { status: "Processing", date: "12 July 2024, 2:00 PM", completed: true },
-        { status: "Shipped", date: "13 July 2024, 9:00 AM", completed: true },
-        { status: "Out for Delivery", date: "15 July 2024, 8:00 AM", completed: true },
-        { status: "Delivered", date: "15 July 2024, 12:30 PM", completed: true },
-      ],
-    },
-    {
-      id: "ORD12344",
-      date: "8 July 2024",
-      status: "Shipped",
-      total: 2499,
-      items: 1,
-      image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop",
-      products: [
-        {
-          name: "Leather Jacket",
-          price: 2499,
-          quantity: 1,
-          size: "L",
-          color: "Black",
-          image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop",
-        },
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "456, Park Avenue",
-        city: "Pune",
-        state: "Maharashtra",
-        pincode: "411001",
-        phone: "+91 98765 43210",
-      },
-      paymentMethod: "UPI",
-      deliveryDate: "11 July 2024",
-      trackingNumber: "TRK987654321",
-      timeline: [
-        { status: "Order Placed", date: "8 July 2024, 11:00 AM", completed: true },
-        { status: "Processing", date: "8 July 2024, 3:30 PM", completed: true },
-        { status: "Shipped", date: "9 July 2024, 10:00 AM", completed: true },
-        { status: "Out for Delivery", date: "", completed: false },
-        { status: "Delivered", date: "", completed: false },
-      ],
-    },
-    {
-      id: "ORD12343",
-      date: "1 July 2024",
-      status: "Processing",
-      total: 1299,
-      items: 3,
-      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=100&h=100&fit=crop",
-      products: [
-        {
-          name: "Casual Shirt",
-          price: 499,
-          quantity: 2,
-          size: "M",
-          color: "White",
-          image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=100&h=100&fit=crop",
-        },
-        {
-          name: "Summer Shorts",
-          price: 301,
-          quantity: 1,
-          size: "30",
-          color: "Khaki",
-          image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=100&h=100&fit=crop",
-        },
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "123, Main Street",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        phone: "+91 98765 43210",
-      },
-      paymentMethod: "Cash on Delivery",
-      deliveryDate: "4 July 2024",
-      trackingNumber: "TRK456123789",
-      timeline: [
-        { status: "Order Placed", date: "1 July 2024, 9:45 AM", completed: true },
-        { status: "Processing", date: "1 July 2024, 1:15 PM", completed: true },
-        { status: "Shipped", date: "", completed: false },
-        { status: "Out for Delivery", date: "", completed: false },
-        { status: "Delivered", date: "", completed: false },
-      ],
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Profile Image Upload Handler
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -248,114 +137,307 @@ const MyAccount = () => {
     }
   };
 
-  // Profile Functions
-  const handleProfileEdit = () => {
-    setIsEditingProfile(true);
+  const mapOrder = (o) => {
+    const statusKey = String(o.status || "pending").toLowerCase();
+    const deliveryDate = o.deliveredAt
+      ? new Date(o.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+      : o.estimatedDelivery
+        ? new Date(o.estimatedDelivery).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+        : "—";
+
+    return {
+      _id: o._id,
+      id: o.orderNumber || o._id,
+      date: o.createdAt
+        ? new Date(o.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+        : "",
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+      status: statusKey.charAt(0).toUpperCase() + statusKey.slice(1),
+      statusKey,
+      total: o.totalPrice || 0,
+      items: o.items?.length || 0,
+      image: o.items?.[0]?.image || "",
+      products:
+        o.items?.map((item) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size || "",
+          color: item.color || "",
+          image: item.image || "",
+        })) || [],
+      shippingAddress: {
+        name: o.shippingAddress?.fullName || "",
+        address: o.shippingAddress?.street || "",
+        city: o.shippingAddress?.city || "",
+        state: o.shippingAddress?.state || "",
+        pincode: o.shippingAddress?.pincode || "",
+        phone: o.shippingAddress?.phone || "",
+      },
+      paymentMethod: formatPaymentMethod(o.paymentMethod),
+      deliveryDate,
+      trackingNumber: o.orderNumber || "",
+      statusHistory: o.statusHistory || [],
+      timeline: buildTimeline(o),
+      canCancel: ["pending", "processing"].includes(statusKey),
+    };
   };
-  const handleProfileSave = () => {
-    setUser({ ...editedUser });
-    setIsEditingProfile(false);
+
+  const fetchProfile = async () => {
+    try {
+      setLoadingProfile(true);
+      const res = await userAPI.getProfile();
+      if (res.success && res.user) {
+        const u = res.user;
+        const mapped = {
+          name: u.name || "",
+          email: u.email || "",
+          phone: u.phone || "",
+          isAdmin: u.role === "admin",
+          role: u.role || "customer",
+          profileImage: u.avatar || null,
+          dateJoined: u.createdAt
+            ? new Date(u.createdAt).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : "—",
+        };
+        setUser(mapped);
+        setEditedUser(mapped);
+        if (u.addresses) {
+          setAddresses(
+            u.addresses.map((addr) => ({
+              id: addr._id,
+              label: addr.label || "Home",
+              name: addr.fullName || "",
+              address: addr.street || "",
+              city: addr.city || "",
+              state: addr.state || "",
+              pincode: addr.pincode || "",
+              phone: addr.phone || "",
+              isDefault: addr.isDefault || false,
+            }))
+          );
+        }
+        if (u.paymentMethods) {
+          setPaymentMethods(
+            u.paymentMethods.map((pm) => ({
+              id: pm._id,
+              cardNumber: pm.cardNumber,
+              cardName: pm.cardName,
+              expiry: pm.expiry,
+              type: pm.type || "VISA",
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+    } finally {
+      setLoadingProfile(false);
+    }
   };
+
+  const fetchOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const res = await orderAPI.getMyOrders();
+      if (res.success && res.orders) {
+        setOrders(res.orders.map(mapOrder));
+      }
+    } catch (err) {
+      console.error("Failed to load orders:", err);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleProfileEdit = () => setIsEditingProfile(true);
+
+  const handleProfileSave = async () => {
+    try {
+      setLoadingProfile(true);
+      const payload = {
+        name: editedUser.name,
+        email: editedUser.email,
+        phone: editedUser.phone,
+      };
+      if (editedUser.profileImage) payload.avatar = editedUser.profileImage;
+      const res = await userAPI.updateProfile(payload);
+      if (res.success && res.user) {
+        setUser({
+          ...editedUser,
+          isAdmin: res.user.role === "admin",
+          role: res.user.role || "customer",
+        });
+      }
+      setIsEditingProfile(false);
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      alert("Failed to update profile: " + (err.message || "Server error"));
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   const handleProfileCancel = () => {
     setEditedUser({ ...user });
     setIsEditingProfile(false);
   };
 
-  // Logout Functions
   const handleLogout = () => {
-    // Add actual logout logic here (clear context, redirect, etc.)
-    console.log("User logged out");
+    logout();
     setShowLogoutModal(false);
+    navigate("/login");
   };
 
-  // Address Functions
+  const handleCancelOrder = async (order) => {
+    if (!window.confirm("Cancel this order?")) return;
+    try {
+      setCancellingOrder(true);
+      await orderAPI.cancelOrder(order._id);
+      await fetchOrders();
+      setSelectedOrder(null);
+      alert("Order cancelled successfully");
+    } catch (err) {
+      alert("Failed to cancel order: " + (err.message || "Server error"));
+    } finally {
+      setCancellingOrder(false);
+    }
+  };
+
   const handleAddAddress = () => {
     setIsAddingAddress(true);
     setEditingAddressId(null);
     setNewAddress({
-      name: "",
-      address: "",
+      label: "Home",
+      fullName: "",
+      phone: "",
+      street: "",
       city: "",
       state: "",
       pincode: "",
-      phone: "",
       isDefault: false,
     });
   };
+
   const handleEditAddress = (address) => {
     setEditingAddressId(address.id);
     setIsAddingAddress(true);
-    setNewAddress({ ...address });
-  };
-  const handleSaveAddress = () => {
-    if (editingAddressId) {
-      // Update existing address
-      setAddresses(addresses.map((addr) =>
-        addr.id === editingAddressId
-          ? { ...newAddress, id: editingAddressId }
-          : newAddress.isDefault
-          ? { ...addr, isDefault: false }
-          : addr
-      ));
-    } else {
-      // Add new address
-      const newId = Date.now();
-      setAddresses([
-        ...addresses.map((addr) =>
-          newAddress.isDefault ? { ...addr, isDefault: false } : addr
-        ),
-        { ...newAddress, id: newId },
-      ]);
-    }
-    setIsAddingAddress(false);
-    setEditingAddressId(null);
-  };
-  const handleDeleteAddress = (id) => {
-    if (window.confirm("Are you sure you want to delete this address?")) {
-      setAddresses(addresses.filter((addr) => addr.id !== id));
-    }
-  };
-  const handleSetDefaultAddress = (id) => {
-    setAddresses(addresses.map((addr) => ({
-      ...addr,
-      isDefault: addr.id === id,
-    })));
-  };
-
-  // Payment Methods Functions
-  const handleAddPayment = () => {
-    setIsAddingPayment(true);
-    setNewPayment({
-      cardNumber: "",
-      cardName: "",
-      expiry: "",
-      cvv: "",
+    setNewAddress({
+      label: address.label || "Home",
+      fullName: address.name || "",
+      phone: address.phone || "",
+      street: address.address || "",
+      city: address.city || "",
+      state: address.state || "",
+      pincode: address.pincode || "",
+      isDefault: address.isDefault || false,
     });
   };
-  const handleSavePayment = () => {
-    // Mask card number
-    const maskedCard = "•••• •••• •••• " + newPayment.cardNumber.slice(-4);
-    const newId = Date.now();
-    setPaymentMethods([
-      ...paymentMethods,
-      {
-        id: newId,
+
+  const handleSaveAddress = async () => {
+    try {
+      setLoadingAddresses(true);
+      if (editingAddressId) {
+        await userAPI.updateAddress(editingAddressId, newAddress);
+      } else {
+        await userAPI.addAddress(newAddress);
+      }
+      await fetchProfile();
+      setIsAddingAddress(false);
+      setEditingAddressId(null);
+    } catch (err) {
+      console.error("Failed to save address:", err);
+      alert("Failed to save address: " + (err.message || "Server error"));
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this address?")) return;
+    try {
+      setLoadingAddresses(true);
+      await userAPI.deleteAddress(id);
+      await fetchProfile();
+    } catch (err) {
+      console.error("Failed to delete address:", err);
+      alert("Failed to delete address: " + (err.message || "Server error"));
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      setLoadingAddresses(true);
+      await userAPI.setDefaultAddress(id);
+      await fetchProfile();
+    } catch (err) {
+      console.error("Failed to set default address:", err);
+      alert("Failed to set default address: " + (err.message || "Server error"));
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleAddPayment = () => {
+    setIsAddingPayment(true);
+    setNewPayment({ cardNumber: "", cardName: "", expiry: "", cvv: "" });
+  };
+
+  const handleSavePayment = async () => {
+    try {
+      setLoadingPayments(true);
+      const digits = newPayment.cardNumber.replace(/\s/g, "");
+      if (digits.length < 12) {
+        alert("Please enter a valid card number");
+        return;
+      }
+      const last4 = digits.slice(-4);
+      const maskedCard = "•••• •••• •••• " + last4;
+      const type = digits.startsWith("4") ? "VISA" : digits.startsWith("5") ? "MASTERCARD" : "CARD";
+      await userAPI.addPaymentMethod({
         cardNumber: maskedCard,
         cardName: newPayment.cardName,
         expiry: newPayment.expiry,
-        type: "VISA", // Default, could be determined from card number
-      },
-    ]);
-    setIsAddingPayment(false);
-  };
-  const handleDeletePayment = (id) => {
-    if (window.confirm("Are you sure you want to delete this payment method?")) {
-      setPaymentMethods(paymentMethods.filter((pm) => pm.id !== id));
+        type,
+      });
+      await fetchProfile();
+      setIsAddingPayment(false);
+    } catch (err) {
+      console.error("Failed to add payment method:", err);
+      alert("Failed to add payment method: " + (err.message || "Server error"));
+    } finally {
+      setLoadingPayments(false);
     }
   };
 
-  // Password Functions
-  const handlePasswordChange = (e) => {
+  const handleDeletePayment = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this payment method?")) return;
+    try {
+      setLoadingPayments(true);
+      await userAPI.deletePaymentMethod(id);
+      await fetchProfile();
+    } catch (err) {
+      console.error("Failed to delete payment method:", err);
+      alert("Failed to delete payment method: " + (err.message || "Server error"));
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
@@ -364,31 +446,33 @@ const MyAccount = () => {
       setPasswordError("New passwords do not match!");
       return;
     }
-
     if (passwordData.newPassword.length < 6) {
       setPasswordError("Password must be at least 6 characters long!");
       return;
     }
 
-    // Simulate successful password change
-    setPasswordSuccess("Password changed successfully!");
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+    try {
+      const res = await userAPI.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      if (res.success) {
+        setPasswordSuccess("Password changed successfully!");
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } else {
+        setPasswordError(res.message || "Failed to change password");
+      }
+    } catch (err) {
+      setPasswordError(err.message || "Failed to change password");
+    }
   };
+
+  const roleBadge = user.isAdmin ? "Admin" : "Member";
 
   return (
     <div className="d_myaccount_page">
-      {/* Hero Breadcrumb */}
       <div className="d_myaccount_hero">
         <div className="container">
-          {/* <ol className="d_breadcrumb_dark">
-            <li><Link to="/">Home</Link></li>
-            <li><FaChevronRight size={10} /></li>
-            <li>My Account</li>
-          </ol> */}
           <h1 className="d_myaccount_hero_title">My Account</h1>
           <p className="d_myaccount_hero_subtitle">Manage your profile, orders, and preferences</p>
         </div>
@@ -397,21 +481,16 @@ const MyAccount = () => {
       <div className="container d_section pt-4">
         <Tab.Container activeKey={activeTab} onSelect={setActiveTab}>
           <Row className="g-5 w-100 ">
-            {/* Sidebar */}
             <Col lg={4} className="d_myaccount_sidebar_col">
               <div className="d_myaccount_sidebar">
                 <div className="d_myaccount_sidebar_profile">
                   <div className="d_myaccount_sidebar_avatar">
-                    {user.profileImage ? (
-                      <img src={user.profileImage} alt="Profile" />
-                    ) : (
-                      <FaUser />
-                    )}
+                    {user.profileImage ? <img src={user.profileImage} alt="Profile" /> : <FaUser />}
                   </div>
                   <div className="d_myaccount_sidebar_user">
-                    <h5>{user.name}</h5>
+                    <h5>{user.name || "Loading…"}</h5>
                     <p>{user.email}</p>
-                    <span className="d_myaccount_member_badge">Super Admin</span>
+                    <span className="d_myaccount_member_badge">{roleBadge}</span>
                   </div>
                 </div>
 
@@ -436,7 +515,6 @@ const MyAccount = () => {
                       <FaCreditCard /> <span>Payment Methods</span>
                     </Nav.Link>
                   </Nav.Item>
-
                   <Nav.Item>
                     <Nav.Link eventKey="wishlist" className={`d_myaccount_sidebar_link ${activeTab === "wishlist" ? "active" : ""}`}>
                       <FaHeart /> <span>Wishlist</span>
@@ -447,13 +525,13 @@ const MyAccount = () => {
                       <FaLock /> <span>Change Password</span>
                     </Nav.Link>
                   </Nav.Item>
-                  {/* {user.isAdmin && (
+                  {user.isAdmin && (
                     <Nav.Item>
                       <Link to="/admin-panel" className="d_myaccount_sidebar_link">
-                        <FaCog /> Admin Panel
+                        <FaCog /> <span>Admin Panel</span>
                       </Link>
                     </Nav.Item>
-                  )} */}
+                  )}
                   <div className="d_myaccount_sidebar_divider"></div>
                   <Nav.Item>
                     <button className="d_myaccount_sidebar_link d_myaccount_sidebar_logout" onClick={() => setShowLogoutModal(true)}>
@@ -464,11 +542,9 @@ const MyAccount = () => {
               </div>
             </Col>
 
-            {/* Content */}
             <Col lg={8}>
               <div className="d_myaccount_content">
                 <Tab.Content>
-                  {/* Profile Tab */}
                   <Tab.Pane eventKey="profile">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
@@ -479,7 +555,7 @@ const MyAccount = () => {
                           </button>
                         ) : (
                           <div className="d-flex gap-2">
-                            <button className="d_btn_primary" onClick={handleProfileSave}>
+                            <button className="d_btn_primary" onClick={handleProfileSave} disabled={loadingProfile}>
                               <FaCheck /> Save
                             </button>
                             <button className="d_btn_outline" onClick={handleProfileCancel}>
@@ -489,83 +565,83 @@ const MyAccount = () => {
                         )}
                       </div>
                       <div className="d_myaccount_card_body">
-                        <div className="d_myaccount_profile_image_section mb-4">
-                          <div className="d_myaccount_profile_image_wrapper">
-                            <div className="d_myaccount_profile_image">
-                              {editedUser.profileImage ? (
-                                <img src={editedUser.profileImage} alt="Profile" />
-                              ) : (
-                                <FaUser />
-                              )}
+                        {loadingProfile && !user.name ? (
+                          <div className="text-center py-4">Loading profile…</div>
+                        ) : (
+                          <>
+                            <div className="d_myaccount_profile_image_section mb-4">
+                              <div className="d_myaccount_profile_image_wrapper">
+                                <div className="d_myaccount_profile_image">
+                                  {editedUser.profileImage ? (
+                                    <img src={editedUser.profileImage} alt="Profile" />
+                                  ) : (
+                                    <FaUser />
+                                  )}
+                                </div>
+                                {isEditingProfile && (
+                                  <label className="d_myaccount_profile_image_upload">
+                                    <FaCamera />
+                                    <input type="file" accept="image/*" onChange={handleProfileImageChange} style={{ display: "none" }} />
+                                  </label>
+                                )}
+                              </div>
                             </div>
-                            {isEditingProfile && (
-                              <label className="d_myaccount_profile_image_upload">
-                                <FaCamera />
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleProfileImageChange}
-                                  style={{ display: "none" }}
-                                />
-                              </label>
-                            )}
-                          </div>
-                        </div>
-                        <Row className="g-3 w-100">
-                          <Col md={6}>
-                            <div className="d_myaccount_field">
-                              <label>Full Name</label>
-                              {isEditingProfile ? (
-                                <input
-                                  type="text"
-                                  value={editedUser.name}
-                                  onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
-                                />
-                              ) : (
-                                <p>{user.name}</p>
-                              )}
-                            </div>
-                          </Col>
-                          <Col md={6}>
-                            <div className="d_myaccount_field">
-                              <label>Email Address</label>
-                              {isEditingProfile ? (
-                                <input
-                                  type="email"
-                                  value={editedUser.email}
-                                  onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
-                                />
-                              ) : (
-                                <p>{user.email}</p>
-                              )}
-                            </div>
-                          </Col>
-                          <Col md={6}>
-                            <div className="d_myaccount_field">
-                              <label>Phone Number</label>
-                              {isEditingProfile ? (
-                                <input
-                                  type="tel"
-                                  value={editedUser.phone}
-                                  onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })}
-                                />
-                              ) : (
-                                <p>{user.phone}</p>
-                              )}
-                            </div>
-                          </Col>
-                          <Col md={6}>
-                            <div className="d_myaccount_field">
-                              <label>Date Joined</label>
-                              <p>1 January 2024</p>
-                            </div>
-                          </Col>
-                        </Row>
+                            <Row className="g-3 w-100">
+                              <Col md={6}>
+                                <div className="d_myaccount_field">
+                                  <label>Full Name</label>
+                                  {isEditingProfile ? (
+                                    <input
+                                      type="text"
+                                      value={editedUser.name}
+                                      onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+                                    />
+                                  ) : (
+                                    <p>{user.name}</p>
+                                  )}
+                                </div>
+                              </Col>
+                              <Col md={6}>
+                                <div className="d_myaccount_field">
+                                  <label>Email Address</label>
+                                  {isEditingProfile ? (
+                                    <input
+                                      type="email"
+                                      value={editedUser.email}
+                                      onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                                    />
+                                  ) : (
+                                    <p>{user.email}</p>
+                                  )}
+                                </div>
+                              </Col>
+                              <Col md={6}>
+                                <div className="d_myaccount_field">
+                                  <label>Phone Number</label>
+                                  {isEditingProfile ? (
+                                    <input
+                                      type="tel"
+                                      value={editedUser.phone}
+                                      onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })}
+                                    />
+                                  ) : (
+                                    <p>{user.phone || "—"}</p>
+                                  )}
+                                </div>
+                              </Col>
+                              <Col md={6}>
+                                <div className="d_myaccount_field">
+                                  <label>Date Joined</label>
+                                  <p>{user.dateJoined || "—"}</p>
+                                </div>
+                              </Col>
+                            </Row>
+                          </>
+                        )}
                       </div>
                     </div>
                   </Tab.Pane>
 
-                  {/* Orders Tab */}
                   <Tab.Pane eventKey="orders">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
@@ -576,32 +652,50 @@ const MyAccount = () => {
                           <div className="d_myaccount_order_details_view mb-4">
                             <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                               <h5>Order {selectedOrder.id} Details</h5>
-                              <button
-                                className="d_btn_outline"
-                                onClick={() => setSelectedOrder(null)}
-                              >
-                                <FaTimes /> Close
-                              </button>
+                              <div className="d-flex gap-2">
+                                {selectedOrder.canCancel && (
+                                  <button className="d_btn_outline" onClick={() => handleCancelOrder(selectedOrder)} disabled={cancellingOrder}>
+                                    {cancellingOrder ? "Cancelling…" : "Cancel Order"}
+                                  </button>
+                                )}
+                                <button className="d_btn_outline" onClick={() => setSelectedOrder(null)}>
+                                  <FaTimes /> Close
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Order Summary */}
                             <div className="d_myaccount_order_summary mb-4">
                               <Row className="g-3 w-100">
                                 <Col md={6}>
-                                  <p className="mb-2"><strong>Order Date:</strong> {selectedOrder.date}</p>
-                                  <p className="mb-2"><strong>Status:</strong> <span className={`d_badge_pill d_status_${selectedOrder.status.toLowerCase()}`}>{selectedOrder.status}</span></p>
-                                  <p className="mb-2"><strong>Total Items:</strong> {selectedOrder.items}</p>
-                                  <p><strong>Total Amount:</strong> ₹{selectedOrder.total.toLocaleString("en-IN")}</p>
+                                  <p className="mb-2">
+                                    <strong>Order Date:</strong> {selectedOrder.date}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Status:</strong>{" "}
+                                    <span className={`d_badge_pill d_status_${selectedOrder.statusKey}`}>{selectedOrder.status}</span>
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Total Items:</strong> {selectedOrder.items}
+                                  </p>
+                                  <p>
+                                    <strong>Total Amount:</strong> ₹{selectedOrder.total.toLocaleString("en-IN")}
+                                  </p>
                                 </Col>
                                 <Col md={6}>
-                                  <p className="mb-2"><strong>Tracking Number:</strong> {selectedOrder.trackingNumber}</p>
-                                  <p className="mb-2"><strong>Payment Method:</strong> {selectedOrder.paymentMethod}</p>
-                                  <p><strong>Estimated Delivery:</strong> {selectedOrder.deliveryDate}</p>
+                                  <p className="mb-2">
+                                    <strong>Tracking Number:</strong> {selectedOrder.trackingNumber}
+                                  </p>
+                                  <p className="mb-2">
+                                    <strong>Payment Method:</strong> {selectedOrder.paymentMethod}
+                                  </p>
+                                  <p>
+                                    <strong>{selectedOrder.statusKey === "delivered" ? "Delivered On:" : "Estimated Delivery:"}</strong>{" "}
+                                    {selectedOrder.deliveryDate}
+                                  </p>
                                 </Col>
                               </Row>
                             </div>
 
-                            {/* Order Timeline */}
                             <div className="d_myaccount_order_timeline mb-4">
                               <h6 className="mb-3">Order Timeline</h6>
                               <div className="d_myaccount_timeline">
@@ -619,7 +713,6 @@ const MyAccount = () => {
                               </div>
                             </div>
 
-                            {/* Products */}
                             <div className="d_myaccount_order_products mb-4">
                               <h6 className="mb-3">Products</h6>
                               {selectedOrder.products.map((product, index) => (
@@ -627,7 +720,11 @@ const MyAccount = () => {
                                   <img src={product.image} alt={product.name} />
                                   <div className="d_myaccount_order_product_info">
                                     <h6>{product.name}</h6>
-                                    <p>Size: {product.size} | Color: {product.color} | Qty: {product.quantity}</p>
+                                    <p>
+                                      {product.size ? `Size: ${product.size} | ` : ""}
+                                      {product.color ? `Color: ${product.color} | ` : ""}
+                                      Qty: {product.quantity}
+                                    </p>
                                   </div>
                                   <div className="d_myaccount_order_product_price">
                                     <h6>₹{product.price.toLocaleString("en-IN")}</h6>
@@ -636,56 +733,63 @@ const MyAccount = () => {
                               ))}
                             </div>
 
-                            {/* Shipping Address */}
                             <div className="d_myaccount_shipping_address">
                               <h6 className="mb-3">Shipping Address</h6>
                               <p>{selectedOrder.shippingAddress.name}</p>
                               <p>{selectedOrder.shippingAddress.address}</p>
-                              <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}</p>
+                              <p>
+                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} -{" "}
+                                {selectedOrder.shippingAddress.pincode}
+                              </p>
                               <p>Phone: {selectedOrder.shippingAddress.phone}</p>
                             </div>
                           </div>
                         )}
+
                         <div className="d_myaccount_orders">
-                          {orders.map((order) => (
-                            <div key={order.id} className="d_myaccount_order">
-                              <div className="d_myaccount_order_header">
-                                <div className="d_myaccount_order_info">
-                                  <span className="d_myaccount_order_id">Order {order.id}</span>
-                                  <span className="d_myaccount_order_date">Placed on {order.date}</span>
-                                </div>
-                                <span className={`d_myaccount_order_status d_status_${order.status.toLowerCase()}`}>{order.status}</span>
-                              </div>
-                              <div className="d_myaccount_order_body">
-                                <img src={order.image} alt="Order product" />
-                                <div className="d_myaccount_order_details">
-                                  <p>{order.items} items</p>
-                                  <h5>Total: ₹{order.total.toLocaleString("en-IN")}</h5>
-                                </div>
-                                <button
-                                  className="d_btn_primary d_myaccount_order_btn"
-                                  onClick={() => setSelectedOrder(order)}
-                                >
-                                  View Details <FaChevronRight size={12} />
-                                </button>
-                              </div>
+                          {loadingOrders ? (
+                            <div className="text-center py-5">Loading orders…</div>
+                          ) : orders.length === 0 ? (
+                            <div className="text-center py-5">
+                              <p>No orders found.</p>
+                              <Link to="/clothing" className="d_btn_primary">
+                                Start Shopping
+                              </Link>
                             </div>
-                          ))}
+                          ) : (
+                            orders.map((order) => (
+                              <div key={order._id || order.id} className="d_myaccount_order">
+                                <div className="d_myaccount_order_header">
+                                  <div className="d_myaccount_order_info">
+                                    <span className="d_myaccount_order_id">Order {order.id}</span>
+                                    <span className="d_myaccount_order_date">Placed on {order.date}</span>
+                                  </div>
+                                  <span className={`d_myaccount_order_status d_status_${order.statusKey}`}>{order.status}</span>
+                                </div>
+                                <div className="d_myaccount_order_body">
+                                  {order.image && <img src={order.image} alt="Order product" />}
+                                  <div className="d_myaccount_order_details">
+                                    <p>{order.items} items</p>
+                                    <h5>Total: ₹{order.total.toLocaleString("en-IN")}</h5>
+                                  </div>
+                                  <button className="d_btn_primary d_myaccount_order_btn" onClick={() => setSelectedOrder(order)}>
+                                    View Details <FaChevronRight size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>
                   </Tab.Pane>
 
-                  {/* Wishlist Tab */}
                   <Tab.Pane eventKey="wishlist">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>My Wishlist</h4>
                         {wishlist.length > 0 && (
-                          <button
-                            className="d_btn_outline"
-                            onClick={() => clearWishlist()}
-                          >
+                          <button className="d_btn_outline" onClick={() => clearWishlist()}>
                             Clear All
                           </button>
                         )}
@@ -703,7 +807,7 @@ const MyAccount = () => {
                         ) : (
                           <Row className="g-3 w-100">
                             {wishlist.map((product) => (
-                              <Col xs={6} lg={4} key={product.id}>
+                              <Col xs={6} lg={4} key={product.id || product._id}>
                                 <ProductCard product={product} />
                               </Col>
                             ))}
@@ -713,7 +817,6 @@ const MyAccount = () => {
                     </div>
                   </Tab.Pane>
 
-                  {/* Addresses Tab */}
                   <Tab.Pane eventKey="addresses">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
@@ -734,9 +837,8 @@ const MyAccount = () => {
                                   <label>Full Name</label>
                                   <input
                                     type="text"
-                                    value={newAddress.name}
-                                    onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
-                                    placeholder="Enter full name"
+                                    value={newAddress.fullName}
+                                    onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
                                   />
                                 </div>
                               </Col>
@@ -747,7 +849,6 @@ const MyAccount = () => {
                                     type="tel"
                                     value={newAddress.phone}
                                     onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
-                                    placeholder="Enter phone number"
                                   />
                                 </div>
                               </Col>
@@ -755,9 +856,8 @@ const MyAccount = () => {
                                 <div className="d_myaccount_field">
                                   <label>Address</label>
                                   <textarea
-                                    value={newAddress.address}
-                                    onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
-                                    placeholder="Enter full address"
+                                    value={newAddress.street}
+                                    onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
                                     rows="2"
                                   />
                                 </div>
@@ -769,7 +869,6 @@ const MyAccount = () => {
                                     type="text"
                                     value={newAddress.city}
                                     onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                                    placeholder="Enter city"
                                   />
                                 </div>
                               </Col>
@@ -780,7 +879,6 @@ const MyAccount = () => {
                                     type="text"
                                     value={newAddress.state}
                                     onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                                    placeholder="Enter state"
                                   />
                                 </div>
                               </Col>
@@ -791,7 +889,6 @@ const MyAccount = () => {
                                     type="text"
                                     value={newAddress.pincode}
                                     onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
-                                    placeholder="Enter pincode"
                                   />
                                 </div>
                               </Col>
@@ -803,11 +900,13 @@ const MyAccount = () => {
                                     checked={newAddress.isDefault}
                                     onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
                                   />
-                                  <label htmlFor="defaultAddress" className="mb-0">Set as default address</label>
+                                  <label htmlFor="defaultAddress" className="mb-0">
+                                    Set as default address
+                                  </label>
                                 </div>
                               </Col>
                               <Col md={12} className="d-flex gap-2">
-                                <button className="d_btn_primary" onClick={handleSaveAddress}>
+                                <button className="d_btn_primary" onClick={handleSaveAddress} disabled={loadingAddresses}>
                                   <FaCheck /> Save
                                 </button>
                                 <button
@@ -824,30 +923,43 @@ const MyAccount = () => {
                           </div>
                         )}
                         <Row className="g-3 w-100">
-                          {addresses.map((address) => (
-                            <Col md={6} key={address.id}>
-                              <div className={`d_myaccount_address ${address.isDefault ? "d_myaccount_address_default" : ""}`}>
-                                <div className="d_myaccount_address_header">
-                                  <h5>{address.name}</h5>
-                                  {address.isDefault && <span className="d_badge_pill">Default</span>}
+                          {loadingAddresses ? (
+                            <div className="text-center py-5 w-100">Loading addresses…</div>
+                          ) : addresses.length === 0 ? (
+                            <div className="text-center py-5 w-100">No addresses found.</div>
+                          ) : (
+                            addresses.map((address) => (
+                              <Col md={6} key={address.id}>
+                                <div className={`d_myaccount_address ${address.isDefault ? "d_myaccount_address_default" : ""}`}>
+                                  <div className="d_myaccount_address_header">
+                                    <h5>{address.name}</h5>
+                                    {address.isDefault && <span className="d_badge_pill">Default</span>}
+                                  </div>
+                                  <p>{address.address}</p>
+                                  <p>
+                                    {address.city}, {address.state} - {address.pincode}
+                                  </p>
+                                  <p>Phone: {address.phone}</p>
+                                  <div className="d_myaccount_address_actions">
+                                    <button onClick={() => handleEditAddress(address)}>
+                                      <FaEdit /> Edit
+                                    </button>
+                                    {!address.isDefault && (
+                                      <button onClick={() => handleSetDefaultAddress(address.id)}>Set as Default</button>
+                                    )}
+                                    <button onClick={() => handleDeleteAddress(address.id)}>
+                                      <FaTrash /> Delete
+                                    </button>
+                                  </div>
                                 </div>
-                                <p>{address.address}</p>
-                                <p>{address.city}, {address.state} - {address.pincode}</p>
-                                <p>Phone: {address.phone}</p>
-                                <div className="d_myaccount_address_actions">
-                                  <button onClick={() => handleEditAddress(address)}><FaEdit /> Edit</button>
-                                  {!address.isDefault && <button onClick={() => handleSetDefaultAddress(address.id)}>Set as Default</button>}
-                                  <button onClick={() => handleDeleteAddress(address.id)}><FaTrash /> Delete</button>
-                                </div>
-                              </div>
-                            </Col>
-                          ))}
+                              </Col>
+                            ))
+                          )}
                         </Row>
                       </div>
                     </div>
                   </Tab.Pane>
 
-                  {/* Payment Tab */}
                   <Tab.Pane eventKey="payment">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
@@ -882,7 +994,6 @@ const MyAccount = () => {
                                     type="text"
                                     value={newPayment.cardName}
                                     onChange={(e) => setNewPayment({ ...newPayment, cardName: e.target.value })}
-                                    placeholder="John Doe"
                                   />
                                 </div>
                               </Col>
@@ -911,13 +1022,10 @@ const MyAccount = () => {
                                 </div>
                               </Col>
                               <Col md={12} className="d-flex gap-2">
-                                <button className="d_btn_primary" onClick={handleSavePayment}>
+                                <button className="d_btn_primary" onClick={handleSavePayment} disabled={loadingPayments}>
                                   <FaCheck /> Add Card
                                 </button>
-                                <button
-                                  className="d_btn_outline"
-                                  onClick={() => setIsAddingPayment(false)}
-                                >
+                                <button className="d_btn_outline" onClick={() => setIsAddingPayment(false)}>
                                   <FaTimes /> Cancel
                                 </button>
                               </Col>
@@ -925,42 +1033,40 @@ const MyAccount = () => {
                           </div>
                         )}
                         <div className="d_myaccount_payment">
-                          {paymentMethods.map((pm) => (
-                            <div key={pm.id} className="d_myaccount_payment_card">
-                              <div className="d_myaccount_payment_card_number">{pm.cardNumber}</div>
-                              <div className="d_myaccount_payment_card_details">
-                                <span className="d_myaccount_payment_card_name">{pm.cardName}</span>
-                                <span className="d_myaccount_payment_card_expiry">{pm.expiry}</span>
+                          {loadingPayments ? (
+                            <div className="text-center py-5">Loading payment methods…</div>
+                          ) : paymentMethods.length === 0 ? (
+                            <div className="text-center py-5">No payment methods found.</div>
+                          ) : (
+                            paymentMethods.map((pm) => (
+                              <div key={pm.id} className="d_myaccount_payment_card">
+                                <div className="d_myaccount_payment_card_number">{pm.cardNumber}</div>
+                                <div className="d_myaccount_payment_card_details">
+                                  <span className="d_myaccount_payment_card_name">{pm.cardName}</span>
+                                  <span className="d_myaccount_payment_card_expiry">{pm.expiry}</span>
+                                </div>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <div className="d_myaccount_payment_card_type">{pm.type}</div>
+                                  <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeletePayment(pm.id)}>
+                                    <FaTrash />
+                                  </button>
+                                </div>
                               </div>
-                              <div className="d-flex justify-content-between align-items-center">
-                                <div className="d_myaccount_payment_card_type">{pm.type}</div>
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleDeletePayment(pm.id)}
-                                >
-                                  <FaTrash />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>
                   </Tab.Pane>
 
-                  {/* Security Tab */}
                   <Tab.Pane eventKey="security">
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Change Password</h4>
                       </div>
                       <div className="d_myaccount_card_body">
-                        {passwordError && (
-                          <div className="alert alert-danger mb-3">{passwordError}</div>
-                        )}
-                        {passwordSuccess && (
-                          <div className="alert alert-success mb-3">{passwordSuccess}</div>
-                        )}
+                        {passwordError && <div className="alert alert-danger mb-3">{passwordError}</div>}
+                        {passwordSuccess && <div className="alert alert-success mb-3">{passwordSuccess}</div>}
                         <form className="d_myaccount_form" onSubmit={handlePasswordChange}>
                           <Row className="g-3 w-100">
                             <Col md={12}>
@@ -968,9 +1074,9 @@ const MyAccount = () => {
                                 <label>Current Password</label>
                                 <input
                                   type="password"
-                                  placeholder="••••••••"
                                   value={passwordData.currentPassword}
                                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                  required
                                 />
                               </div>
                             </Col>
@@ -979,9 +1085,9 @@ const MyAccount = () => {
                                 <label>New Password</label>
                                 <input
                                   type="password"
-                                  placeholder="••••••••"
                                   value={passwordData.newPassword}
                                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                  required
                                 />
                               </div>
                             </Col>
@@ -990,21 +1096,22 @@ const MyAccount = () => {
                                 <label>Confirm New Password</label>
                                 <input
                                   type="password"
-                                  placeholder="••••••••"
                                   value={passwordData.confirmPassword}
                                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                  required
                                 />
                               </div>
                             </Col>
                             <Col md={12}>
-                              <button type="submit" className="d_btn_primary">Update Password</button>
+                              <button type="submit" className="d_btn_primary">
+                                Update Password
+                              </button>
                             </Col>
                           </Row>
                         </form>
                       </div>
                     </div>
                   </Tab.Pane>
-
                 </Tab.Content>
               </div>
             </Col>
@@ -1012,13 +1119,7 @@ const MyAccount = () => {
         </Tab.Container>
       </div>
 
-      {/* Logout Modal */}
-      <Modal
-        show={showLogoutModal}
-        onHide={() => setShowLogoutModal(false)}
-        centered
-        className="d_logout_modal"
-      >
+      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered className="d_logout_modal">
         <Modal.Header closeButton className="d_logout_modal_header">
           <Modal.Title>Logout</Modal.Title>
         </Modal.Header>

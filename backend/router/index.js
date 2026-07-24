@@ -4,8 +4,11 @@ const router = express.Router();
 const userRoute = require("./user.route");
 const categoryRoute = require("./category.route");
 const productRoute = require("./product.route");
-const orderRoute = require("./order.route");
+const orderRoute = require("./order.route");        
 const advertisementRoute = require("./advertisement.route");
+const statsController = require("../controller/stats.controller");
+const settingsController = require("../controller/settings.controller");
+const { protect, admin } = require("../middleware/auth.middleware");
 
 const User = require("../model/user.model");
 const Category = require("../model/category.model");
@@ -19,6 +22,13 @@ router.use("/categories", categoryRoute);
 router.use("/products", productRoute);
 router.use("/orders", orderRoute);
 router.use("/advertisements", advertisementRoute);
+
+// Stats (admin)
+router.get("/stats", protect, admin, statsController.getStats);
+
+// Store settings
+router.get("/settings", protect, admin, settingsController.getSettings);
+router.put("/settings", protect, admin, settingsController.updateSettings);
 
 // Seed endpoint (development only)
 router.post("/seed", async (req, res) => {

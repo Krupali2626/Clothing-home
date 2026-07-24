@@ -2,10 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { productAPI, userAPI, categoryAPI, orderAPI } from "../services/api";
-import { trendingProducts } from "../data/products";
 
-// Initial data fallback
-const INITIAL_WISHLIST = trendingProducts.slice(0, 6);
 const INITIAL_CART = [];
 
 const ShopContext = createContext();
@@ -23,9 +20,9 @@ export const ShopProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState(() => {
     try {
       const saved = localStorage.getItem("wishlist");
-      return saved ? JSON.parse(saved) : INITIAL_WISHLIST;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_WISHLIST;
+      return [];
     }
   });
   const [cart, setCart] = useState(() => {
@@ -78,12 +75,24 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
+  // Fetch wishlist from backend
+  const fetchWishlist = async () => {
+    try {
+      const response = await userAPI.getWishlist();
+      setWishlist(response.wishlist || []);
+    } catch (err) {
+      console.error("Failed to fetch wishlist:", err);
+    }
+  };
+
   // Fetch user profile if authenticated
   const fetchUserProfile = async () => {
     try {
       const response = await userAPI.getProfile();
       setUser(response.user);
+      localStorage.setItem("user", JSON.stringify(response.user));
       setIsAuthenticated(true);
+      await fetchWishlist();
     } catch (err) {
       console.error("Failed to fetch profile:", err);
       setUser(null);
@@ -134,7 +143,8 @@ export const ShopProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(response.user));
       setUser(response.user);
       setIsAuthenticated(true);
-      navigate("/");
+      await fetchWishlist();
+      navigate(response.user?.role === "admin" ? "/admin-panel" : "/");
       return response;
     } catch (err) {
       setError(err.message);
@@ -152,6 +162,7 @@ export const ShopProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(response.user));
       setUser(response.user);
       setIsAuthenticated(true);
+      setWishlist([]);
       navigate("/");
       return response;
     } catch (err) {
@@ -169,7 +180,7 @@ export const ShopProvider = ({ children }) => {
     setCart([]);
     setWishlist([]);
     setOrders([]);
-    navigate("/");
+    navigate("/login");
   };
 
   const updateProfile = async (profileData) => {
@@ -187,24 +198,49 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Wishlist functions
-  const addToWishlist = (product) => {
-    const exists = wishlist.find((item) => item.id === product.id);
-    if (!exists) {
-      setWishlist((prev) => [...prev, product]);
+  // Wishlist functions (synced with backend when logged in)
+  const addToWishlist = async (product) => {
+    const productId = product.id || product._id;
+    const exists = wishlist.find((item) => String(item.id) === String(productId));
+    if (exists) return;
+
+    setWishlist((prev) => [...prev, { ...product, id: String(productId) }]);
+
+    if (isAuthenticated) {
+      try {
+        const res = await userAPI.addToWishlist(productId);
+        if (res.wishlist) setWishlist(res.wishlist);
+      } catch (err) {
+        console.error("Failed to sync wishlist add:", err);
+      }
     }
   };
 
-  const removeFromWishlist = (id) => {
-    setWishlist((prev) => prev.filter((p) => p.id !== id));
+  const removeFromWishlist = async (id) => {
+    setWishlist((prev) => prev.filter((p) => String(p.id) !== String(id)));
+    if (isAuthenticated) {
+      try {
+        const res = await userAPI.removeFromWishlist(id);
+        if (res.wishlist) setWishlist(res.wishlist);
+      } catch (err) {
+        console.error("Failed to sync wishlist remove:", err);
+      }
+    }
   };
 
-  const clearWishlist = () => {
+  const clearWishlist = async () => {
     setWishlist([]);
+    if (isAuthenticated) {
+      try {
+        await userAPI.clearWishlist();
+      } catch (err) {
+        console.error("Failed to clear wishlist:", err);
+      }
+    }
   };
 
   const isInWishlist = (id) => {
-    return wishlist.some((item) => item.id === id);
+    return wishlist.some((item) => String(item.id) === String(id));
   };
 
   // Cart functions
@@ -300,6 +336,7 @@ export const ShopProvider = ({ children }) => {
         // User & Auth
         user,
         isAuthenticated,
+        authLoading,
         orders,
         login,
         register,
@@ -314,6 +351,7 @@ export const ShopProvider = ({ children }) => {
         removeFromWishlist,
         clearWishlist,
         isInWishlist,
+        fetchWishlist,
         
         // Cart
         cart,

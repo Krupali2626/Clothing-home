@@ -45,7 +45,7 @@ const AppRoutes = () => {
       <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
       <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
       <Route path="/my-account" element={<ProtectedRoute><MyAccount /></ProtectedRoute>} />
-      <Route path="/admin-panel" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+      <Route path="/admin-panel" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
     </Routes>
   );
 };

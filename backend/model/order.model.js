@@ -48,15 +48,35 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        },
+        note: { type: String, default: "" },
+        at: { type: Date, default: Date.now },
+      },
+    ],
+    estimatedDelivery: { type: Date },
+    deliveredAt: { type: Date },
   },
   { timestamps: true }
 );
 
-// Auto-generate order number
+// Auto-generate order number + initial status history
 orderSchema.pre("save", function (next) {
   if (!this.orderNumber) {
     this.orderNumber =
       "ORD" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 90 + 10);
+  }
+  if (this.isNew && (!this.statusHistory || this.statusHistory.length === 0)) {
+    this.statusHistory = [{ status: this.status || "pending", note: "Order placed", at: new Date() }];
+  }
+  if (this.isNew && !this.estimatedDelivery) {
+    const eta = new Date();
+    eta.setDate(eta.getDate() + 5);
+    this.estimatedDelivery = eta;
   }
   next();
 });

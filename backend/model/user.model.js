@@ -15,6 +15,16 @@ const addressSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const paymentMethodSchema = new mongoose.Schema(
+  {
+    cardNumber: { type: String, required: true },
+    cardName: { type: String, required: true },
+    expiry: { type: String, required: true },
+    type: { type: String, default: "VISA" },
+  },
+  { _id: true }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -31,6 +41,7 @@ const userSchema = new mongoose.Schema(
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     avatar: { type: String, default: "" },
     addresses: [addressSchema],
+    paymentMethods: [paymentMethodSchema],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },
   { timestamps: true }
