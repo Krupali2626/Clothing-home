@@ -193,16 +193,16 @@ const Appliances = () => {
   }, [fetchCategories]);
 
   const applianceCats = useMemo(() => apiCategories.filter((c) => c.type === "appliance"), [apiCategories]);
-  const applianceProducts = useMemo(() => products.filter((p) => p.type === "appliance"), [products]);
+  const applianceProducts = useMemo(() => products.filter((p) => p.type === "appliances"), [products]);
 
   const BRANDS = useMemo(() => [...new Set(applianceProducts.map((p) => p.brand || "").filter(Boolean))], [applianceProducts]);
 
   // Fetch products from API when component mounts
   useEffect(() => {
-    const filters = { type: "appliance" };
-    if (initCategory) filters.category = initCategory;
-    if (initSearch) filters.search = initSearch;
-    fetchProducts(filters);
+    const fetchParams = { type: "appliances" };
+    if (initCategory) fetchParams.category = initCategory;
+    if (initSearch) fetchParams.search = initSearch;
+    fetchProducts(fetchParams);
   }, []);
 
   // Update URL when search changes
@@ -223,7 +223,7 @@ const Appliances = () => {
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
     if (filters.categories.length)
-      list = list.filter((p) => filters.categories.includes(p.category?.toLowerCase().replace(/\s+/g, "-") || ""));
+      list = list.filter((p) => filters.categories.includes(p.category || ""));
     if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
     if (filters.priceRange) {
       const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);

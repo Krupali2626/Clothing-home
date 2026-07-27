@@ -271,7 +271,7 @@ const Clothing = () => {
       list = list.filter((p) => filters.gender.includes(p.gender));
     }
     if (filters.categories.length)
-      list = list.filter((p) => filters.categories.includes(p.category?.toLowerCase().replace(/\s+/g, "-") || ""));
+      list = list.filter((p) => filters.categories.includes(p.category || ""));
     if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
     if (filters.priceRange) {
       const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
@@ -401,7 +401,7 @@ const Clothing = () => {
                 <button
                   className="d_btn_outline"
                   onClick={() =>
-                    setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false })
+                    setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false, gender: [] })
                   }
                 >
                   Clear Filters
