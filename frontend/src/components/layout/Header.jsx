@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Container, Offcanvas, Dropdown, Badge } from "react-bootstrap";
 import {
@@ -20,13 +20,9 @@ import products from "../../data/products";
 import { useShop } from "../../context/ShopContext";
 import "./Header.css";
 
-const typeLabel = { clothing: "Clothing", appliance: "Home Appliances" };
-const typeIcon = { clothing: FaTshirt, appliance: FaBlender };
-const typeUrl = { clothing: "clothing", appliance: "appliances" };
-
 const Header = () => {
   const navigate = useNavigate();
-  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout, categories, loading } = useShop();
+  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout, categories, fetchCategories } = useShop();
   const [scrolled, setScrolled] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
@@ -37,11 +33,14 @@ const Header = () => {
   const [hoveredCat, setHoveredCat] = useState(null);
   const searchContainerRef = useRef(null);
 
-  const groupedCats = (categories || []).reduce((acc, c) => {
-    if (!acc[c.type]) acc[c.type] = [];
-    acc[c.type].push(c);
-    return acc;
-  }, {});
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Filter categories by type
+  const clothingCats = useMemo(() => categories.filter((c) => c.type === "clothing"), [categories]);
+  const applianceCats = useMemo(() => categories.filter((c) => c.type === "appliance"), [categories]);
 
   const handleLogout = () => {
     logout();
@@ -285,48 +284,63 @@ const Header = () => {
       <nav className="d_nav_bar d-none d-lg-block">
         <Container fluid className="d_container_fluid">
           <ul className="d_nav_list">
-            {loading && Object.keys(groupedCats).length === 0 ? (
-              <li className="d_nav_item"><span className="d_nav_link">Loading…</span></li>
-            ) : (
-              <>
-                {Object.entries(groupedCats).map(([type, cats]) => {
-                  const Icon = typeIcon[type];
-                  const label = typeLabel[type] || type;
-                  const urlPrefix = typeUrl[type] || type;
-                  return (
-                    <li className="d_nav_item d_nav_has_mega" key={type}>
-                      <span className="d_nav_link">
-                        {Icon && <Icon size={13} />} {label} <FaChevronDown size={10} />
-                      </span>
-                      <div className="d_mega_menu">
-                        <div className="d_mega_col">
-                          <h6>Shop by Category</h6>
-                          {cats.map((c) => (
-                            <NavLink
-                              key={c.id}
-                              to={`/${urlPrefix}?category=${c.slug}`}
-                              onMouseEnter={() => setHoveredCat(c)}
-                              onMouseLeave={() => setHoveredCat(null)}
-                            >
-                              {c.name}
-                            </NavLink>
-                          ))}
-                        </div>
-                        <div className="d_mega_col d_mega_banner">
-                          <img src={hoveredCat?.image || cats[0]?.image} alt={`${label} promotion`} />
-                          <p>Up to 50% off {label.toLowerCase()}</p>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
+            <li className="d_nav_item d_nav_has_mega">
+              <span className="d_nav_link">
+                <FaTshirt size={13} /> Clothing <FaChevronDown size={10} />
+              </span>
+              <div className="d_mega_menu">
+                <div className="d_mega_col">
+                  <h6>Shop by Category</h6>
+                  {clothingCats.slice(0, 8).map((c) => (
+                    <NavLink key={c._id || c.id} to={`/clothing?category=${c.slug}`}>
+                      {c.name}
+                    </NavLink>
+                  ))}
+                </div>
+                <div className="d_mega_col">
+                  <h6>Trending</h6>
+                  <NavLink to="/clothing?sort=new">New Arrivals</NavLink>
+                  <NavLink to="/clothing?sort=bestseller">Best Sellers</NavLink>
+                  <NavLink to="/clothing?filter=sale">On Sale</NavLink>
+                  <NavLink to="/clothing?category=winter-wear">Winter Edit</NavLink>
+                </div>
+                <div className="d_mega_col d_mega_banner">
+                  <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=260&h=180&fit=crop&auto=format" alt="Clothing promotion" />
+                  <p>Up to 50% off new season styles</p>
+                </div>
+              </div>
+            </li>
 
-                <li className="d_nav_item"><NavLink to="/clothing?filter=sale" className="d_nav_link d_nav_link_flash">Flash Sale</NavLink></li>
-                <li className="d_nav_item"><NavLink to="/about" className="d_nav_link">About</NavLink></li>
-                <li className="d_nav_item"><NavLink to="/blog" className="d_nav_link">Blog</NavLink></li>
-                <li className="d_nav_item"><NavLink to="/contact" className="d_nav_link">Contact</NavLink></li>
-              </>
-            )}
+            <li className="d_nav_item d_nav_has_mega">
+              <span className="d_nav_link">
+                <FaBlender size={13} /> Home Appliances <FaChevronDown size={10} />
+              </span>
+              <div className="d_mega_menu">
+                <div className="d_mega_col">
+                  <h6>Shop by Category</h6>
+                  {applianceCats.slice(0, 8).map((c) => (
+                    <NavLink key={c._id || c.id} to={`/appliances?category=${c.slug}`}>
+                      {c.name}
+                    </NavLink>
+                  ))}
+                </div>
+                <div className="d_mega_col">
+                  <h6>Popular</h6>
+                  <NavLink to="/appliances?category=tv">Smart TVs</NavLink>
+                  <NavLink to="/appliances?category=refrigerator">Refrigerators</NavLink>
+                  <NavLink to="/appliances?filter=sale">Deals of the Day</NavLink>
+                </div>
+                <div className="d_mega_col d_mega_banner">
+                  <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=260&h=180&fit=crop&auto=format" alt="Appliances promotion" />
+                  <p>Upgrade your home this season</p>
+                </div>
+              </div>
+            </li>
+
+            <li className="d_nav_item"><NavLink to="/clothing?filter=sale" className="d_nav_link d_nav_link_flash">Flash Sale</NavLink></li>
+            <li className="d_nav_item"><NavLink to="/about" className="d_nav_link">About</NavLink></li>
+            <li className="d_nav_item"><NavLink to="/blog" className="d_nav_link">Blog</NavLink></li>
+            <li className="d_nav_item"><NavLink to="/contact" className="d_nav_link">Contact</NavLink></li>
           </ul>
         </Container>
       </nav>
