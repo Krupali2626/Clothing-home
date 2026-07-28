@@ -44,7 +44,7 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
-const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
+const FilterPanel = ({ filters, setFilters, brands = [], categories = [], searchParams, setSearchParams }) => {
   const handleBrand = (brand) => {
     setFilters((f) => ({
       ...f,
@@ -66,12 +66,23 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [] }) => {
   };
 
   const handleCategory = (slug) => {
+    const newCategories = filters.categories.includes(slug)
+      ? filters.categories.filter((x) => x !== slug)
+      : [slug]; // Only allow single category selection
+    
     setFilters((f) => ({
       ...f,
-      categories: f.categories.includes(slug)
-        ? f.categories.filter((x) => x !== slug)
-        : [...f.categories, slug],
+      categories: newCategories,
     }));
+
+    // Update URL to reflect category change
+    if (newCategories.length > 0) {
+      setSearchParams({ ...Object.fromEntries(searchParams), category: newCategories[0] });
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("category");
+      setSearchParams(newParams);
+    }
   };
 
   return (
@@ -197,13 +208,30 @@ const Appliances = () => {
 
   const BRANDS = useMemo(() => [...new Set(applianceProducts.map((p) => p.brand || "").filter(Boolean))], [applianceProducts]);
 
-  // Fetch products from API when component mounts
+  // Fetch products from API when component mounts or category/search changes
   useEffect(() => {
-    const filters = { type: "appliance" };
-    if (initCategory) filters.category = initCategory;
-    if (initSearch) filters.search = initSearch;
-    fetchProducts(filters);
+    const fetchParams = { type: "appliance" };
+    if (filters.categories.length > 0) fetchParams.category = filters.categories[0];
+    if (initSearch) fetchParams.search = initSearch;
+    fetchProducts(fetchParams);
+  }, [filters.categories, initSearch]);
+
+  // Initial fetch with URL params
+  useEffect(() => {
+    const fetchParams = { type: "appliance" };
+    if (initCategory) fetchParams.category = initCategory;
+    if (initSearch) fetchParams.search = initSearch;
+    fetchProducts(fetchParams);
   }, []);
+
+  // Sync URL category with filter state when URL changes
+  useEffect(() => {
+    if (initCategory && !filters.categories.includes(initCategory)) {
+      setFilters((f) => ({ ...f, categories: [initCategory] }));
+    } else if (!initCategory && filters.categories.length > 0) {
+      setFilters((f) => ({ ...f, categories: [] }));
+    }
+  }, [initCategory]);
 
   // Update URL when search changes
   const handleSearchChange = (e) => {
@@ -223,7 +251,7 @@ const Appliances = () => {
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
     if (filters.categories.length)
-      list = list.filter((p) => filters.categories.includes(p.category?.toLowerCase().replace(/\s+/g, "-") || ""));
+      list = list.filter((p) => filters.categories.includes(p.category || ""));
     if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
     if (filters.priceRange) {
       const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
@@ -247,7 +275,7 @@ const Appliances = () => {
       case "discount": return list.sort((a, b) => b.discount - a.discount);
       default: return list;
     }
-  }, [filters, sort, search, initFilter]);
+  }, [filters, sort, search, initFilter, applianceProducts]);
 
   const activeFilterCount =
     filters.categories.length +
@@ -286,7 +314,7 @@ const Appliances = () => {
 
         <div className="d_listing_layout">
           <aside className="d_sidebar d-none d-lg-block">
-            <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} />
+            <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} searchParams={searchParams} setSearchParams={setSearchParams} />
           </aside>
 
           <div className="d_listing_main">
@@ -374,7 +402,7 @@ const Appliances = () => {
           </button>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} />
+          <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} searchParams={searchParams} setSearchParams={setSearchParams} />
         </Offcanvas.Body>
       </Offcanvas>
     </div>

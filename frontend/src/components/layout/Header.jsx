@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Container, Offcanvas, Dropdown, Badge } from "react-bootstrap";
 import {
@@ -16,17 +16,13 @@ import {
   FaCog,
   FaSignOutAlt,
 } from "react-icons/fa";
-import categories from "../../data/categories";
 import products from "../../data/products";
 import { useShop } from "../../context/ShopContext";
 import "./Header.css";
 
-const clothingCats = categories.filter((c) => c.type === "clothing");
-const applianceCats = categories.filter((c) => c.type === "appliances");
-
 const Header = () => {
   const navigate = useNavigate();
-  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout } = useShop();
+  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout, categories, fetchCategories } = useShop();
   const [scrolled, setScrolled] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
@@ -35,6 +31,15 @@ const Header = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef(null);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Filter categories by type
+  const clothingCats = useMemo(() => categories.filter((c) => c.type === "clothing"), [categories]);
+  const applianceCats = useMemo(() => categories.filter((c) => c.type === "appliance"), [categories]);
 
   const handleLogout = () => {
     logout();
@@ -286,7 +291,7 @@ const Header = () => {
                 <div className="d_mega_col">
                   <h6>Shop by Category</h6>
                   {clothingCats.slice(0, 8).map((c) => (
-                    <NavLink key={c.id} to={`/clothing?category=${c.slug}`}>
+                    <NavLink key={c._id || c.id} to={`/clothing?category=${c.slug}`}>
                       {c.name}
                     </NavLink>
                   ))}
@@ -313,7 +318,7 @@ const Header = () => {
                 <div className="d_mega_col">
                   <h6>Shop by Category</h6>
                   {applianceCats.slice(0, 8).map((c) => (
-                    <NavLink key={c.id} to={`/appliances?category=${c.slug}`}>
+                    <NavLink key={c._id || c.id} to={`/appliances?category=${c.slug}`}>
                       {c.name}
                     </NavLink>
                   ))}
