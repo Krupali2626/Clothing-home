@@ -44,7 +44,14 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
-const FilterPanel = ({ filters, setFilters, brands = [], categories = [], searchParams, setSearchParams }) => {
+const FilterPanel = ({
+  filters,
+  setFilters,
+  brands = [],
+  categories = [],
+  searchParams,
+  setSearchParams,
+}) => {
   const handleBrand = (brand) => {
     setFilters((f) => ({
       ...f,
@@ -69,7 +76,7 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
     const newCategories = filters.categories.includes(slug)
       ? filters.categories.filter((x) => x !== slug)
       : [slug]; // Only allow single category selection
-    
+
     setFilters((f) => ({
       ...f,
       categories: newCategories,
@@ -77,7 +84,10 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
 
     // Update URL to reflect category change
     if (newCategories.length > 0) {
-      setSearchParams({ ...Object.fromEntries(searchParams), category: newCategories[0] });
+      setSearchParams({
+        ...Object.fromEntries(searchParams),
+        category: newCategories[0],
+      });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("category");
@@ -150,7 +160,8 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
               onChange={() => handleRating(r)}
             />
             <span>
-              {"★".repeat(r)}{"☆".repeat(5 - r)} & above
+              {"★".repeat(r)}
+              {"☆".repeat(5 - r)} & above
             </span>
           </label>
         ))}
@@ -170,7 +181,13 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
       <button
         className="d_filter_clear"
         onClick={() =>
-          setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false })
+          setFilters({
+            categories: [],
+            brands: [],
+            priceRange: null,
+            minRating: 0,
+            inStock: false,
+          })
         }
       >
         Clear All Filters
@@ -180,17 +197,26 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
 };
 
 const Appliances = () => {
-  const { products, loading, fetchProducts, categories: apiCategories, fetchCategories } = useShop();
+  const {
+    products,
+    loading,
+    fetchProducts,
+    categories: apiCategories,
+    fetchCategories,
+  } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initCategory = searchParams.get("category") || "";
+  const currentCategory = searchParams.get("category") || "";
+  const currentSearch = searchParams.get("search") || "";
+  const currentFilter = searchParams.get("filter") || "";
+  const currentSort = searchParams.get("sort") || "featured";
   const initSort = searchParams.get("sort") || "featured";
   const initFilter = searchParams.get("filter") || "";
   const initSearch = searchParams.get("search") || "";
 
   const [sort, setSort] = useState(initSort);
   const [filters, setFilters] = useState({
-    categories: initCategory ? [initCategory] : [],
+    categories: currentCategory ? [currentCategory] : [],
     brands: [],
     priceRange: null,
     minRating: 0,
@@ -202,43 +228,73 @@ const Appliances = () => {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+const applianceProducts = useMemo(() => {
+    return products.filter(
+      (p) => p.type === "appliance" || p.type === "appliances",
+    );
+  }, [products]);
+  const applianceCats = useMemo(() => {
+  return apiCategories
+    .filter((c) => c.type === "appliance")
+    .map((cat) => ({
+      ...cat,
+      count: applianceProducts.filter((p) => {
+        const productCategory =
+          typeof p.category === "object"
+            ? p.category.slug
+            : p.category;
 
-  const applianceCats = useMemo(() => apiCategories.filter((c) => c.type === "appliance"), [apiCategories]);
-  const applianceProducts = useMemo(() => products.filter((p) => p.type === "appliances"), [products]);
-
-  const BRANDS = useMemo(() => [...new Set(applianceProducts.map((p) => p.brand || "").filter(Boolean))], [applianceProducts]);
+        return productCategory === cat.slug;
+      }).length,
+    }));
+}, [apiCategories, applianceProducts]);
+  
+  const BRANDS = useMemo(
+    () => [
+      ...new Set(applianceProducts.map((p) => p.brand || "").filter(Boolean)),
+    ],
+    [applianceProducts],
+  );
 
   // Fetch products from API when component mounts or category/search changes
   useEffect(() => {
-    const fetchParams = { type: "appliance" };
-    if (filters.categories.length > 0) fetchParams.category = filters.categories[0];
-    if (initSearch) fetchParams.search = initSearch;
+    const fetchParams = {
+      type: "appliance",
+    };
+
+    if (currentCategory) fetchParams.category = currentCategory;
+
+    if (currentSearch) fetchParams.search = currentSearch;
+
     fetchProducts(fetchParams);
-  }, [filters.categories, initSearch]);
+  }, [currentCategory, currentSearch]);
 
   // Initial fetch with URL params
-  useEffect(() => {
-    const fetchParams = { type: "appliance" };
-    if (initCategory) fetchParams.category = initCategory;
-    if (initSearch) fetchParams.search = initSearch;
-    fetchProducts(fetchParams);
-  }, []);
+  // useEffect(() => {
+  //   const fetchParams = { type: "appliance" };
+  //   if (currentCategory) fetchParams.category = currentCategory;
+  //   if (initSearch) fetchParams.search = initSearch;
+  //   fetchProducts(fetchParams);
+  // }, []);
 
   // Sync URL category with filter state when URL changes
   useEffect(() => {
-    if (initCategory && !filters.categories.includes(initCategory)) {
-      setFilters((f) => ({ ...f, categories: [initCategory] }));
-    } else if (!initCategory && filters.categories.length > 0) {
+    if (currentCategory && !filters.categories.includes(currentCategory)) {
+      setFilters((f) => ({ ...f, categories: [currentCategory] }));
+    } else if (!currentCategory && filters.categories.length > 0) {
       setFilters((f) => ({ ...f, categories: [] }));
     }
-  }, [initCategory]);
+  }, [currentCategory]);
 
   // Update URL when search changes
   const handleSearchChange = (e) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
     if (newSearch.trim()) {
-      setSearchParams({ ...Object.fromEntries(searchParams), search: newSearch });
+      setSearchParams({
+        ...Object.fromEntries(searchParams),
+        search: newSearch,
+      });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("search");
@@ -250,30 +306,71 @@ const Appliances = () => {
     let list = [...applianceProducts];
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
-    if (filters.categories.length)
-      list = list.filter((p) => filters.categories.includes(p.category || ""));
-    if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
-    if (filters.priceRange) {
-      const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
-      if (range) list = list.filter((p) => p.salePrice >= range.min && p.salePrice <= range.max);
+    if (filters.categories.length) {
+      list = list.filter((p) => {
+        console.log("Selected:", filters.categories[0]);
+        console.log("Product Category:", p.category);
+
+        return filters.categories.includes(p.category || "");
+      });
     }
-    if (filters.minRating) list = list.filter((p) => p.rating >= filters.minRating);
-    if (filters.inStock) list = list.filter((p) => p.stock > 0);
+    if (filters.brands.length)
+      list = list.filter((p) => filters.brands.includes(p.brand));
+   if (filters.priceRange) {
+  const range = PRICE_RANGES.find(
+    (r) => r.label === filters.priceRange
+  );
+
+  if (range) {
+    list = list.filter((p) => {
+      const price = Number(p.salePrice ?? p.price ?? 0);
+
+      return price >= range.min && price <= range.max;
+    });
+  }
+}
+    if (filters.minRating)
+     list = list.filter((p) => {
+    const rating = Number(
+        p.rating ??
+        p.averageRating ??
+        p.ratings ??
+        0
+    );
+
+    return rating >= filters.minRating;
+});
+    if (filters.inStock) list = list.filter((p) => {
+    const qty = Number(
+        p.stock ??
+        p.quantity ??
+        0
+    );
+
+    return qty > 0;
+});
     if (search.trim()) {
       const searchLower = search.toLowerCase();
-      list = list.filter((p) => 
-        p.name.toLowerCase().includes(searchLower) || 
-        p.brand.toLowerCase().includes(searchLower)
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.brand.toLowerCase().includes(searchLower),
       );
     }
 
     switch (sort) {
-      case "newest": return list.reverse();
-      case "price-asc": return list.sort((a, b) => a.salePrice - b.salePrice);
-      case "price-desc": return list.sort((a, b) => b.salePrice - a.salePrice);
-      case "rating": return list.sort((a, b) => b.rating - a.rating);
-      case "discount": return list.sort((a, b) => b.discount - a.discount);
-      default: return list;
+      case "newest":
+        return list.reverse();
+      case "price-asc":
+        return list.sort((a, b) => a.salePrice - b.salePrice);
+      case "price-desc":
+        return list.sort((a, b) => b.salePrice - a.salePrice);
+      case "rating":
+        return list.sort((a, b) => b.rating - a.rating);
+      case "discount":
+        return list.sort((a, b) => b.discount - a.discount);
+      default:
+        return list;
     }
   }, [filters, sort, search, initFilter, applianceProducts]);
 
@@ -299,8 +396,12 @@ const Appliances = () => {
           <h1>Home Appliances</h1>
           <nav aria-label="breadcrumb">
             <ol className="d_breadcrumb">
-              <li><Link to="/">Home</Link></li>
-              <li><FaChevronRight size={10} /></li>
+              <li>
+                <Link to="/">Home</Link>
+              </li>
+              <li>
+                <FaChevronRight size={10} />
+              </li>
               <li>Home Appliances</li>
             </ol>
           </nav>
@@ -314,7 +415,14 @@ const Appliances = () => {
 
         <div className="d_listing_layout">
           <aside className="d_sidebar d-none d-lg-block">
-            <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} searchParams={searchParams} setSearchParams={setSearchParams} />
+            <FilterPanel
+              filters={filters}
+              setFilters={setFilters}
+              brands={BRANDS}
+              categories={applianceCats}
+              searchParams={searchParams}
+              setSearchParams={setSearchParams}
+            />
           </aside>
 
           <div className="d_listing_main">
@@ -326,7 +434,9 @@ const Appliances = () => {
                 >
                   <FaFilter /> Filters
                   {activeFilterCount > 0 && (
-                    <Badge bg="" className="d_filter_badge">{activeFilterCount}</Badge>
+                    <Badge bg="" className="d_filter_badge">
+                      {activeFilterCount}
+                    </Badge>
                   )}
                 </button>
                 <p className="d_result_count">
@@ -351,7 +461,9 @@ const Appliances = () => {
                     className="d_sort_select"
                   >
                     {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </Form.Select>
                 </div>
@@ -364,7 +476,13 @@ const Appliances = () => {
                 <button
                   className="d_btn_outline"
                   onClick={() =>
-                    setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false })
+                    setFilters({
+                      categories: [],
+                      brands: [],
+                      priceRange: null,
+                      minRating: 0,
+                      inStock: false,
+                    })
                   }
                 >
                   Clear Filters
@@ -373,13 +491,7 @@ const Appliances = () => {
             ) : (
               <Row className="g-3">
                 {filtered.map((p) => (
-                  <Col
-                    key={p.id}
-                    xs={6}
-                    md={4}
-                    lg={4}
-                    xl={3}
-                  >
+                  <Col key={p.id} xs={6} md={4} lg={4} xl={3}>
                     <ProductCard product={p} />
                   </Col>
                 ))}
@@ -396,13 +508,26 @@ const Appliances = () => {
         className="d_filter_offcanvas"
       >
         <Offcanvas.Header className="d_filter_offcanvas_header">
-          <h5>Filters {activeFilterCount > 0 && <Badge bg="">{activeFilterCount}</Badge>}</h5>
-          <button onClick={() => setShowMobileFilter(false)} aria-label="Close filters">
+          <h5>
+            Filters{" "}
+            {activeFilterCount > 0 && <Badge bg="">{activeFilterCount}</Badge>}
+          </h5>
+          <button
+            onClick={() => setShowMobileFilter(false)}
+            aria-label="Close filters"
+          >
             <FaTimes />
           </button>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          <FilterPanel filters={filters} setFilters={setFilters} brands={BRANDS} categories={applianceCats} searchParams={searchParams} setSearchParams={setSearchParams} />
+          <FilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            brands={BRANDS}
+            categories={applianceCats}
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+          />
         </Offcanvas.Body>
       </Offcanvas>
     </div>

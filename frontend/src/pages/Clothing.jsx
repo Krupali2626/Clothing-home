@@ -13,7 +13,6 @@ import GoogleAdBanner from "../components/common/GoogleAdBanner";
 import { useShop } from "../context/ShopContext";
 import "./Clothing.css";
 
-
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
   { value: "newest", label: "Newest First" },
@@ -44,7 +43,14 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
-const FilterPanel = ({ filters, setFilters, brands = [], categories = [], searchParams, setSearchParams }) => {
+const FilterPanel = ({
+  filters,
+  setFilters,
+  brands = [],
+  categories = [],
+  searchParams,
+  setSearchParams,
+}) => {
   const handleBrand = (brand) => {
     setFilters((f) => ({
       ...f,
@@ -66,18 +72,18 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
   };
 
   const handleCategory = (slug) => {
-    const newCategories = filters.categories.includes(slug)
-      ? filters.categories.filter((x) => x !== slug)
-      : [slug]; // Only allow single category selection
-    
+    const newCategories = filters.categories[0] === slug ? [] : [slug];
+
     setFilters((f) => ({
       ...f,
       categories: newCategories,
     }));
-
     // Update URL to reflect category change
     if (newCategories.length > 0) {
-      setSearchParams({ ...Object.fromEntries(searchParams), category: newCategories[0] });
+      setSearchParams({
+        ...Object.fromEntries(searchParams),
+        category: newCategories[0],
+      });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("category");
@@ -90,7 +96,9 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
       const current = f.gender || [];
       return {
         ...f,
-        gender: current.includes(gender) ? current.filter((g) => g !== gender) : [...current, gender],
+        gender: current.includes(gender)
+          ? current.filter((g) => g !== gender)
+          : [...current, gender],
       };
     });
   };
@@ -105,7 +113,11 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
                 <input
                   type="radio"
                   name="gender"
-                  checked={g === "all" ? !(filters.gender || []).length : (filters.gender || []).includes(g)}
+                  checked={
+                    g === "all"
+                      ? !(filters.gender || []).length
+                      : (filters.gender || []).includes(g)
+                  }
                   onChange={() =>
                     setFilters((f) => ({
                       ...f,
@@ -113,7 +125,9 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
                     }))
                   }
                 />
-                <span>{g === "all" ? "All" : g === "male" ? "Male" : "Female"}</span>
+                <span>
+                  {g === "all" ? "All" : g === "male" ? "Male" : "Female"}
+                </span>
               </label>
             </li>
           ))}
@@ -183,7 +197,8 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
               onChange={() => handleRating(r)}
             />
             <span>
-              {"★".repeat(r)}{"☆".repeat(5 - r)} & above
+              {"★".repeat(r)}
+              {"☆".repeat(5 - r)} & above
             </span>
           </label>
         ))}
@@ -203,7 +218,14 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
       <button
         className="d_filter_clear"
         onClick={() =>
-          setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false, gender: [] })
+          setFilters({
+            categories: [],
+            brands: [],
+            priceRange: null,
+            minRating: 0,
+            inStock: false,
+            gender: [],
+          })
         }
       >
         Clear All Filters
@@ -213,10 +235,19 @@ const FilterPanel = ({ filters, setFilters, brands = [], categories = [], search
 };
 
 const Clothing = () => {
-  const { products, loading, fetchProducts, categories: apiCategories, fetchCategories } = useShop();
+  const {
+    products,
+    loading,
+    fetchProducts,
+    categories: apiCategories,
+    fetchCategories,
+  } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initCategory = searchParams.get("category") || "";
+  const initCategory = useMemo(
+    () => searchParams.get("category") || "",
+    [searchParams.toString()],
+  );
   const initSort = searchParams.get("sort") || "featured";
   const initFilter = searchParams.get("filter") || "";
   const initSearch = searchParams.get("search") || "";
@@ -237,19 +268,46 @@ const Clothing = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const clothingCats = useMemo(() => apiCategories.filter((c) => c.type === "clothing"), [apiCategories]);
+  const clothingCats = useMemo(() => {
+    let cats = apiCategories.filter((c) => c.type === "clothing");
 
+    // Gender select હોય તો Product પરથી category શોધો
+    if (filters.gender.length === 1) {
+      const gender = filters.gender[0].toLowerCase();
+
+      const categorySlugs = [
+        ...new Set(
+          products
+            .filter(
+              (p) =>
+                p.gender && p.gender.toLowerCase() === gender && p.category,
+            )
+            .map((p) => p.category),
+        ),
+      ];
+
+      cats = cats.filter((c) => categorySlugs.includes(c.slug));
+    }
+
+    return cats;
+  }, [apiCategories, products, filters.gender]);
   // Get unique brands from products
-  const brands = [...new Set(products.map((p) => p.brand || "").filter(Boolean))];
+  const brands = [
+    ...new Set(products.map((p) => p.brand || "").filter(Boolean)),
+  ];
 
   // Fetch products from API when component mounts or category/search/gender changes
   useEffect(() => {
-    const fetchParams = { type: "clothing" };
-    if (filters.categories.length > 0) fetchParams.category = filters.categories[0];
+    const fetchParams = {
+      type: "clothing",
+    };
+
     if (initSearch) fetchParams.search = initSearch;
+
     if (filters.gender.length === 1) fetchParams.gender = filters.gender[0];
+
     fetchProducts(fetchParams);
-  }, [filters.categories, filters.gender, initSearch]);
+  }, [filters.gender, initSearch]);
 
   // Initial fetch with URL params
   useEffect(() => {
@@ -261,19 +319,23 @@ const Clothing = () => {
 
   // Sync URL category with filter state when URL changes
   useEffect(() => {
-    if (initCategory && !filters.categories.includes(initCategory)) {
-      setFilters((f) => ({ ...f, categories: [initCategory] }));
-    } else if (!initCategory && filters.categories.length > 0) {
+    const urlCategory = searchParams.get("category");
+    if (urlCategory && !filters.categories.includes(urlCategory)) {
+      setFilters((f) => ({ ...f, categories: [urlCategory] }));
+    } else if (!urlCategory && filters.categories.length > 0) {
       setFilters((f) => ({ ...f, categories: [] }));
     }
-  }, [initCategory]);
+  }, [searchParams.toString(), filters.categories]);
 
   // Update URL when search changes
   const handleSearchChange = (e) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
     if (newSearch.trim()) {
-      setSearchParams({ ...Object.fromEntries(searchParams), search: newSearch });
+      setSearchParams({
+        ...Object.fromEntries(searchParams),
+        search: newSearch,
+      });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("search");
@@ -281,39 +343,51 @@ const Clothing = () => {
     }
   };
 
- 
-
   const filtered = useMemo(() => {
     let list = [...products];
 
     if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
     if (filters.gender.length) {
-      list = list.filter((p) => filters.gender.includes(p.gender));
+      list = list.filter(
+        (p) => p.gender && filters.gender.includes(p.gender.toLowerCase()),
+      );
     }
     if (filters.categories.length)
       list = list.filter((p) => filters.categories.includes(p.category || ""));
-    if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand));
+    if (filters.brands.length)
+      list = list.filter((p) => filters.brands.includes(p.brand));
     if (filters.priceRange) {
       const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
-      if (range) list = list.filter((p) => p.salePrice >= range.min && p.salePrice <= range.max);
+      if (range)
+        list = list.filter(
+          (p) => p.salePrice >= range.min && p.salePrice <= range.max,
+        );
     }
-    if (filters.minRating) list = list.filter((p) => p.rating >= filters.minRating);
+    if (filters.minRating)
+      list = list.filter((p) => p.rating >= filters.minRating);
     if (filters.inStock) list = list.filter((p) => p.stock > 0);
     if (search.trim()) {
       const searchLower = search.toLowerCase();
-      list = list.filter((p) => 
-        p.name.toLowerCase().includes(searchLower) || 
-        p.brand?.toLowerCase().includes(searchLower)
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.brand?.toLowerCase().includes(searchLower),
       );
     }
 
     switch (sort) {
-      case "newest": return list.reverse();
-      case "price-asc": return list.sort((a, b) => a.salePrice - b.salePrice);
-      case "price-desc": return list.sort((a, b) => b.salePrice - a.salePrice);
-      case "rating": return list.sort((a, b) => b.rating - a.rating);
-      case "discount": return list.sort((a, b) => b.discount - a.discount);
-      default: return list;
+      case "newest":
+        return list.reverse();
+      case "price-asc":
+        return list.sort((a, b) => a.salePrice - b.salePrice);
+      case "price-desc":
+        return list.sort((a, b) => b.salePrice - a.salePrice);
+      case "rating":
+        return list.sort((a, b) => b.rating - a.rating);
+      case "discount":
+        return list.sort((a, b) => b.discount - a.discount);
+      default:
+        return list;
     }
   }, [filters, sort, search, initFilter, products]);
 
@@ -350,8 +424,12 @@ const Clothing = () => {
           <h1>Clothing</h1>
           <nav aria-label="breadcrumb">
             <ol className="d_breadcrumb">
-              <li><Link to="/">Home</Link></li>
-              <li><FaChevronRight size={10} /></li>
+              <li>
+                <Link to="/">Home</Link>
+              </li>
+              <li>
+                <FaChevronRight size={10} />
+              </li>
               <li>Clothing</li>
             </ol>
           </nav>
@@ -367,7 +445,14 @@ const Clothing = () => {
         <div className="d_listing_layout">
           {/* Sidebar (desktop) */}
           <aside className="d_sidebar d-none d-lg-block">
-            <FilterPanel filters={filters} setFilters={setFilters} brands={brands} categories={clothingCats} searchParams={searchParams} setSearchParams={setSearchParams} />
+            <FilterPanel
+              filters={filters}
+              setFilters={setFilters}
+              brands={brands}
+              categories={clothingCats}
+              searchParams={searchParams}
+              setSearchParams={setSearchParams}
+            />
           </aside>
 
           {/* Main content */}
@@ -381,7 +466,9 @@ const Clothing = () => {
                 >
                   <FaFilter /> Filters
                   {activeFilterCount > 0 && (
-                    <Badge bg="" className="d_filter_badge">{activeFilterCount}</Badge>
+                    <Badge bg="" className="d_filter_badge">
+                      {activeFilterCount}
+                    </Badge>
                   )}
                 </button>
                 <p className="d_result_count">
@@ -407,7 +494,9 @@ const Clothing = () => {
                     className="d_sort_select"
                   >
                     {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </Form.Select>
                 </div>
@@ -421,7 +510,14 @@ const Clothing = () => {
                 <button
                   className="d_btn_outline"
                   onClick={() =>
-                    setFilters({ categories: [], brands: [], priceRange: null, minRating: 0, inStock: false, gender: [] })
+                    setFilters({
+                      categories: [],
+                      brands: [],
+                      priceRange: null,
+                      minRating: 0,
+                      inStock: false,
+                      gender: [],
+                    })
                   }
                 >
                   Clear Filters
@@ -430,13 +526,7 @@ const Clothing = () => {
             ) : (
               <Row className="g-3">
                 {filtered.map((p) => (
-                  <Col
-                    key={p.id}
-                    xs={6}
-                    md={4}
-                    lg={4}
-                    xl={3}
-                  >
+                  <Col key={p.id} xs={6} md={4} lg={4} xl={3}>
                     <ProductCard product={p} />
                   </Col>
                 ))}
@@ -454,13 +544,26 @@ const Clothing = () => {
         className="d_filter_offcanvas"
       >
         <Offcanvas.Header className="d_filter_offcanvas_header">
-          <h5>Filters {activeFilterCount > 0 && <Badge bg="">{activeFilterCount}</Badge>}</h5>
-          <button onClick={() => setShowMobileFilter(false)} aria-label="Close filters">
+          <h5>
+            Filters{" "}
+            {activeFilterCount > 0 && <Badge bg="">{activeFilterCount}</Badge>}
+          </h5>
+          <button
+            onClick={() => setShowMobileFilter(false)}
+            aria-label="Close filters"
+          >
             <FaTimes />
           </button>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          <FilterPanel filters={filters} setFilters={setFilters} brands={brands} categories={clothingCats} searchParams={searchParams} setSearchParams={setSearchParams} />
+          <FilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            brands={brands}
+            categories={clothingCats}
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+          />
         </Offcanvas.Body>
       </Offcanvas>
     </div>

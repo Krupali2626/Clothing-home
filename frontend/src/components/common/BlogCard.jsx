@@ -8,7 +8,7 @@ const BlogCard = ({ blog }) => {
     <div className="d_blog_card d_fade_up">
       <Link to={`/blog/${blog.slug}`} className="d_blog_img_wrap">
         <img src={blog.image} alt={blog.title} loading="lazy" />
-        <span className="d_badge_pill d_blog_category">{blog.category}</span>
+        <span className="d_badge_pill d_blog_category ">{blog.category}</span>
       </Link>
       <div className="d_blog_body">
         <span className="d_blog_date">
