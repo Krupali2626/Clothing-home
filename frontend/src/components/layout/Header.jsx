@@ -57,7 +57,7 @@ const Header = () => {
     if (searchInput.trim().length > 0) {
       const query = searchInput.toLowerCase().trim();
       const filtered = products
-        .filter(
+        .filter(       
           (p) =>
             p.name.toLowerCase().includes(query) ||
             p.brand.toLowerCase().includes(query) ||
