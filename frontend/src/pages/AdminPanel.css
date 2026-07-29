@@ -164,12 +164,16 @@
 
 /* Stats Cards */
 .d_admin_stats {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+.d_admin_stats .row {
+  margin: 0;
 }
 
 .d_stat_card {
+  height: 100%;
+  width: 100%;
   flex: 1;
   min-width: 200px;
   background: var(--d-primary);
@@ -463,20 +467,26 @@
 
 /* Responsive Design */
 @media (max-width: 991px) {
-  .d_admin_sidebar_col {
-    order: 2;
+ 
+  .d_admin_sidebar_nav {
+    padding: 3px 0;
   }
 
-  .d_admin_stats {
-    gap: 16px;
+
+  .d_admin_stats .row {
+    row-gap: 16px;
   }
 
   .d_stat_card {
-    min-width: calc(50% - 8px);
+    min-width: 0;
   }
 }
 
 @media (max-width: 767px) {
+  .d_admin_stats .row {
+    row-gap: 12px;
+  }
+
   .d_admin_sidebar_profile {
     padding: 16px;
   }
@@ -503,6 +513,10 @@
   .d_stat_card {
     min-width: 100%;
     padding: 20px;
+  }
+
+  .d_stat_card .d_stat_info h3 {
+    font-size: 1.4rem;
   }
 
   .d_stat_icon {

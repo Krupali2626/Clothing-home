@@ -666,23 +666,25 @@ const AdminPanel = () => {
                       <div className="text-center py-5">Loading stats…</div>
                     ) : (
                       <div className="d_admin_stats">
-                        {stats.map((stat) => (
-                          <Col key={stat.id} xs={12} sm={6} lg={3}>
-                            <Card className="d_stat_card">
-                              <div className="d_stat_icon">
-                                <stat.icon />
-                              </div>
-                              <div className="d_stat_info">
-                                <h3>{stat.value}</h3>
-                                <p>{stat.title}</p>
-                                <span className={`d_stat_change ${stat.trend}`}>
-                                  {stat.trend === "up" ? <FaAngleUp /> : <FaAngleDown />}
-                                  {stat.change}
-                                </span>
-                              </div>
-                            </Card>
-                          </Col>
-                        ))}
+                        <Row className="g-4">
+                          {stats.map((stat) => (
+                            <Col key={stat.id} xs={12} sm={6} md={6} lg={3}>
+                              <Card className="d_stat_card">
+                                <div className="d_stat_icon">
+                                  <stat.icon />
+                                </div>
+                                <div className="d_stat_info">
+                                  <h3>{stat.value}</h3>
+                                  <p>{stat.title}</p>
+                                  <span className={`d_stat_change ${stat.trend}`}>
+                                    {stat.trend === "up" ? <FaAngleUp /> : <FaAngleDown />}
+                                    {stat.change}
+                                  </span>
+                                </div>
+                              </Card>
+                            </Col>
+                          ))}
+                        </Row>
                       </div>
                     )}
 
