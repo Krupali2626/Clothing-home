@@ -13,6 +13,7 @@ export const ShopProvider = ({ children }) => {
   // State - Products & Categories
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,6 +49,7 @@ export const ShopProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("authToken"));
   const [authLoading, setAuthLoading] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [cartNotice, setCartNotice] = useState(null);
 
   // Fetch products from backend
   const fetchProducts = useCallback(async (filters = {}) => {
@@ -248,30 +250,50 @@ export const ShopProvider = ({ children }) => {
 
   // Cart functions
   const addToCart = async (product, qty = 1, size = null, color = null) => {
+    const productId = String(product.id || product._id);
+    const availableStock = Number(product.stock);
+    // Only products with a valid stock value can be added above zero.
+    if (!Number.isFinite(availableStock) || availableStock <= 0) {
+      setCartNotice({ type: "danger", text: `${product.name} is out of stock.` });
+      return { added: false, reason: "out-of-stock" };
+    }
+    const requestedQty = Math.max(1, Number(qty) || 1);
     setCart((prev) => {
-      const exists = prev.find((item) => item.id === product.id);
+      const exists = prev.find((item) => String(item.id || item._id) === productId);
       if (exists) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + qty } : item
-        );
+        return prev; // Products can only be added once; quantity is changed in Cart.
       } else {
         return [
           ...prev,
           {
             ...product,
-            qty,
+            id: productId,
+            stock: availableStock,
+            qty: Math.min(requestedQty, availableStock),
             selectedSize: size || (product.sizes ? product.sizes[0] : null),
             selectedColor: color || (product.colors ? product.colors[0] : null),
           },
         ];
       }
     });
+    const alreadyAdded = cart.some((item) => String(item.id || item._id) === productId);
+    if (alreadyAdded) {
+      setCartNotice({ type: "warning", text: `${product.name} is already added to your cart.` });
+      return { added: false, reason: "already-added" };
+    }
+    setCartNotice({ type: "success", text: `${product.name} was added to your cart.` });
+    return { added: true };
   };
 
   const updateCartQty = (id, delta) => {
     setCart((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
+        String(item.id || item._id) === String(id)
+          ? {
+              ...item,
+              qty: Math.max(1, Math.min(Number(item.qty || 1) + delta, Number.isFinite(Number(item.stock)) ? Number(item.stock) : Number(item.qty || 1))),
+            }
+          : item
       )
     );
   };
@@ -363,6 +385,8 @@ export const ShopProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         createOrder,
+        cartNotice,
+        setCartNotice,
 
         // Quick View & Search
         quickViewProduct,

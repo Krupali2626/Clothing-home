@@ -164,6 +164,18 @@
   color: var(--d-white);
 }
 
+.d_qty_control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.d_cart_stock_limit {
+  display: block;
+  margin-top: 5px;
+  color: #b45309;
+  font-size: 0.72rem;
+}
+
 .d_qty_control span {
   width: 38px;
   text-align: center;

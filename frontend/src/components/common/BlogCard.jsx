@@ -17,7 +17,7 @@ const BlogCard = ({ blog }) => {
         <Link to={`/blog/${blog.slug}`} className="d_blog_title">
           {blog.title}
         </Link>
-        <p className="d_blog_excerpt">{blog.excerpt}</p>
+        <p className="d_blog_excerpt ">{blog.excerpt}</p>
         <Link to={`/blog/${blog.slug}`} className="d_blog_read_more">
           Read More <FaArrowRight size={11} />
         </Link>

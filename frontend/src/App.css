@@ -36,3 +36,11 @@
     transform: rotate(360deg);
   }
 }
+.d_cart_notice {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 3000;
+  width: min(390px, calc(100vw - 36px));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+}

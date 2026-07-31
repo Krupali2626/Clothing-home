@@ -302,6 +302,7 @@ const AdminPanel = () => {
         price: "",
         discountPrice: "",
         stock: "",
+        lowStockThreshold: 5,
         status: "active",
         image: "",
         type: "clothing",
@@ -409,6 +410,7 @@ const AdminPanel = () => {
           price: Number(form.price) || 0,
           discountPrice: Number(form.discountPrice) || 0,
           stock: Number(form.stock) || 0,
+          lowStockThreshold: Number(form.lowStockThreshold) || 0,
           status: form.status || "active",
           category: form.category,
           type: form.type || "clothing",
@@ -697,6 +699,11 @@ const AdminPanel = () => {
                   <Nav.Item>
                     <Nav.Link eventKey="products" className={`d_admin_sidebar_link ${activeTab === "products" ? "active" : ""}`}>
                       <FaBox /> Products
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link as={Link} to="/admin/inventory" className="d_admin_sidebar_link">
+                      <FaBox /> Stock Management
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
@@ -1384,6 +1391,15 @@ const AdminPanel = () => {
                       <Form.Control type="number" name="stock" value={form.stock || ""} onChange={handleFormChange} />
                     </Form.Group>
                   </Col>
+                  <Col md={6}>
+                    <Form.Group className="d_admin_form_group">
+                      <Form.Label>Low Stock Alert At</Form.Label>
+                      <Form.Control type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold ?? 5} onChange={handleFormChange} />
+                      <Form.Text className="text-muted">Show alert when stock reaches this quantity.</Form.Text>
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row className="g-3">
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Type</Form.Label>

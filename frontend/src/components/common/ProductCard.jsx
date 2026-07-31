@@ -18,7 +18,10 @@ const ProductCard = ({ product }) => {
     badge,
     stock,
   } = product;
-  const { addToWishlist, removeFromWishlist, isInWishlist, openQuickView, addToCart, requireAuth } = useShop();
+  const { addToWishlist, removeFromWishlist, isInWishlist, openQuickView, addToCart, requireAuth, cart } = useShop();
+  const cartQuantity = cart.find((item) => String(item.id || item._id) === String(id))?.qty || 0;
+  const hasStockLimit = Number.isFinite(Number(stock));
+  const isAtMaxStock = hasStockLimit && cartQuantity >= Number(stock);
 
   const handleWishlistClick = (e) => {
     e.preventDefault();
@@ -106,10 +109,11 @@ const ProductCard = ({ product }) => {
         <button
           className="d_btn_add_cart"
           type="button"
-          disabled={stock === 0}
+          disabled={stock === 0 || cartQuantity > 0 || isAtMaxStock}
+          title={cartQuantity > 0 ? "This product is already in your cart" : undefined}
           onClick={handleAddToCart}
         >
-          <FaShoppingCart /> {stock === 0 ? "Notify Me" : "Add to Cart"}
+          <FaShoppingCart /> {stock === 0 ? "Notify Me" : cartQuantity > 0 ? "Already Added" : isAtMaxStock ? "Max Stock Added" : "Add to Cart"}
         </button>
       </div>
     </div>

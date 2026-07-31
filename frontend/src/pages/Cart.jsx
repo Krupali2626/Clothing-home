@@ -130,8 +130,11 @@ const Cart = () => {
                 <span></span>
               </div>
 
-              {cart.map((item) => (
-                <div key={item.id} className="d_cart_item">
+              {cart.map((item) => {
+                const hasStockLimit = Number.isFinite(Number(item.stock));
+                const maxStock = hasStockLimit ? Number(item.stock) : null;
+                const isAtMaxStock = hasStockLimit && item.qty >= maxStock;
+                return <div key={item.id} className="d_cart_item">
                   <div className="d_cart_item_product">
                     <Link to={`/product/${item.id}`} className="d_cart_item_img">
                       <img src={item.image} alt={item.name} />
@@ -162,9 +165,15 @@ const Cart = () => {
                         <FaMinus />
                       </button>
                       <span>{item.qty}</span>
-                      <button onClick={() => updateCartQty(item.id, 1)} aria-label="Increase">
+                      <button
+                        onClick={() => updateCartQty(item.id, 1)}
+                        aria-label="Increase"
+                        disabled={isAtMaxStock}
+                        title={isAtMaxStock ? `Only ${maxStock} item(s) available` : "Increase"}
+                      >
                         <FaPlus />
                       </button>
+                      {isAtMaxStock && <small className="d_cart_stock_limit">Maximum available stock: {maxStock}</small>}
                     </div>
                   </div>
 
@@ -182,8 +191,8 @@ const Cart = () => {
                   >
                     <FaTrash />
                   </button>
-                </div>
-              ))}
+                </div>;
+              })}
             </div>
 
             {/* ── Coupon ──────────────────────────────────────────────────── */}

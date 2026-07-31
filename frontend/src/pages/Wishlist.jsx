@@ -16,7 +16,7 @@ import { useShop } from "../context/ShopContext";
 import "./Wishlist.css";
 
 const Wishlist = () => {
-  const { wishlist, removeFromWishlist, clearWishlist, addToCart } = useShop();
+  const { wishlist, removeFromWishlist, clearWishlist, addToCart, cart } = useShop();
   const suggested = latestProducts.filter((p) => !wishlist.find((i) => i.id === p.id)).slice(0, 4);
 
   if (wishlist.length === 0) {
@@ -61,7 +61,9 @@ const Wishlist = () => {
 
       <div className="container d_section pt-3">
         <Row className="g-3 g-md-4">
-          {wishlist.map((product) => (
+          {wishlist.map((product) => {
+            const alreadyAdded = cart.some((item) => String(item.id || item._id) === String(product.id || product._id));
+            return (
             <Col key={product.id} xs={6} sm={4} md={4} lg={3}>
               <div className="d_wishlist_card">
                 {/* Remove button */}
@@ -121,16 +123,17 @@ const Wishlist = () => {
                   <button
                     className="d_btn_add_cart d_wishlist_cart_btn"
                     type="button"
-                    disabled={product.stock === 0}
+                    disabled={product.stock === 0 || alreadyAdded}
+                    title={alreadyAdded ? "This product is already in your cart" : undefined}
                     onClick={() => addToCart(product)}
                   >
                     <FaShoppingCart />
-                    {product.stock === 0 ? "Notify Me" : "Add to Cart"}
+                    {product.stock === 0 ? "Notify Me" : alreadyAdded ? "Already Added" : "Add to Cart"}
                   </button>
                 </div>
               </div>
             </Col>
-          ))}
+          );})}
         </Row>
 
         {/* Suggested */}

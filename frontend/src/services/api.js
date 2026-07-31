@@ -215,6 +215,14 @@ export const statsAPI = {
   getStats: () => apiCall("/stats"),
 };
 
+// Inventory APIs (admin)
+export const inventoryAPI = {
+  getSummary: () => apiCall("/inventory/summary"),
+  getProducts: (status = "all") => apiCall(`/inventory/products?status=${status}`),
+  adjustStock: (id, data) => apiCall(`/inventory/products/${id}/adjust`, { method: "POST", body: JSON.stringify(data) }),
+  getMovements: (id) => apiCall(`/inventory/products/${id}/movements`),
+};
+
 // Settings APIs (admin)
 export const settingsAPI = {
   getSettings: () => apiCall("/settings"),
@@ -330,6 +338,7 @@ export default {
   categoryAPI,
   orderAPI,
   statsAPI,
+  inventoryAPI,
   settingsAPI,
   advertisementAPI,
   couponAPI,

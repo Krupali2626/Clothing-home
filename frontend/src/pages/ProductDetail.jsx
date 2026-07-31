@@ -25,7 +25,7 @@ import "./ProductDetail.css";
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { products, addToCart, addToWishlist, isInWishlist, removeFromWishlist, requireAuth } = useShop();
+  const { products, addToCart, addToWishlist, isInWishlist, removeFromWishlist, requireAuth, cart } = useShop();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +55,13 @@ const ProductDetail = () => {
     return () => { active = false; };
   }, [id]);
 
+  // Keep the picker within the currently available stock when navigating
+  // between products or when refreshed product data changes its quantity.
+  useEffect(() => {
+    if (!product || Number(product.stock) <= 0) return;
+    setQuantity((current) => Math.min(Math.max(1, current), Number(product.stock)));
+  }, [product?._id, product?.id, product?.stock]);
+
   if (loading) {
     return (
       <div className="d_container_fluid d_section text-center">
@@ -75,6 +82,8 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!requireAuth()) return;
+    const productAlreadyInCart = cart.some((item) => String(item.id || item._id) === String(product.id || product._id));
+    if (Number(product.stock) <= 0 || productAlreadyInCart) return;
     addToCart(product, quantity, selectedSize, selectedColor);
   };
 
@@ -96,6 +105,10 @@ const ProductDetail = () => {
 
   const discount = product.discount || 0;
   const savings = product.mrp - product.salePrice;
+  const availableStock = Number(product.stock) || 0;
+  const cartQuantity = cart.find((item) => String(item.id || item._id) === String(product.id || product._id))?.qty || 0;
+  const alreadyAdded = cartQuantity > 0;
+  const isCartButtonDisabled = availableStock === 0 || alreadyAdded;
 
   return (
     <div className="d_product_detail_page">
@@ -244,8 +257,10 @@ const ProductDetail = () => {
                   </button>
                   <span>{quantity}</span>
                   <button
-                    onClick={() => setQuantity((q) => q + 1)}
+                    onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
                     aria-label="Increase quantity"
+                    disabled={quantity >= availableStock}
+                    title={quantity >= availableStock ? `Only ${availableStock} item(s) available` : "Increase quantity"}
                   >
                     <FaPlus />
                   </button>
@@ -253,9 +268,11 @@ const ProductDetail = () => {
                 <button
                   className="d_btn_primary d_detail_cart_btn"
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0}
+                  disabled={isCartButtonDisabled}
+                  aria-disabled={isCartButtonDisabled}
+                  title={alreadyAdded ? "This product is already in your cart" : undefined}
                 >
-                  <FaShoppingCart /> {product.stock === 0 ? "Notify Me" : "Add to Cart"}
+                  <FaShoppingCart /> {availableStock === 0 ? "Notify Me" : alreadyAdded ? "Already Added" : "Add to Cart"}
                 </button>
                 <div className="d_detail_wishlist_share">
                 <button

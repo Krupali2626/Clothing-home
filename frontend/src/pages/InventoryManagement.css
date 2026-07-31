@@ -1,0 +1,6 @@
+.inventory-page { max-width: 1240px; }
+.inventory-stat { border: 0; box-shadow: 0 2px 12px rgba(20, 31, 53, .08); }
+.inventory-stat .card-body { display: flex; align-items: center; gap: 15px; }
+.inventory-stat svg { font-size: 1.75rem; }
+.inventory-stat small { color: #6c757d; }
+.inventory-stat h3 { margin: 2px 0 0; font-size: 1.45rem; }

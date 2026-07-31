@@ -6,6 +6,7 @@ const Advertisement = require("./advertisement.model");
 const Settings = require("./settings.model");
 const Contact = require("./contact.model");
 const Coupon = require("./coupon.model");
+const StockMovement = require("./stock-movement.model");
 
 module.exports = {
   User,
@@ -16,4 +17,5 @@ module.exports = {
   Settings,
   Contact,
   Coupon,
+  StockMovement,
 };

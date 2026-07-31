@@ -15,6 +15,7 @@ import ProductDetail from "../pages/ProductDetail";
 import MyOrders from "../pages/MyOrders";
 import MyAccount from "../pages/MyAccount";
 import AdminPanel from "../pages/AdminPanel";
+import InventoryManagement from "../pages/InventoryManagement";
 import PolicyPage from "../pages/PolicyPage";
 import FAQ from "../pages/FAQ";
 import ComingSoon from "../pages/ComingSoon";
@@ -46,6 +47,7 @@ const AppRoutes = () => {
       <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
       <Route path="/my-account" element={<ProtectedRoute><MyAccount /></ProtectedRoute>} />
       <Route path="/admin-panel" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
+      <Route path="/admin/inventory" element={<ProtectedRoute adminOnly><InventoryManagement /></ProtectedRoute>} />
     </Routes>
   );
 };

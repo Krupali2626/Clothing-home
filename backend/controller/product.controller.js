@@ -1,4 +1,4 @@
-const { Product, Category } = require("../model");
+const { Product, Category, StockMovement } = require("../model");
 const { toProductObject } = require("../utils/transform");
 const mongoose = require("mongoose");
 
@@ -127,11 +127,24 @@ exports.updateProduct = async (req, res) => {
       if (!resolved) return res.status(400).json({ success: false, message: "Invalid category" });
       updates.category = resolved;
     }
+    const previousProduct = await Product.findById(req.params.id);
+    if (!previousProduct) return res.status(404).json({ success: false, message: "Product not found" });
     const product = await Product.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     });
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    // A direct Product API stock update is also recorded in inventory history.
+    if (updates.stock !== undefined && Number(updates.stock) !== previousProduct.stock) {
+      await StockMovement.create({
+        product: product._id,
+        type: "adjustment",
+        quantity: Number(product.stock) - previousProduct.stock,
+        previousStock: previousProduct.stock,
+        resultingStock: product.stock,
+        reason: updates.stockReason || "Stock updated from product management",
+        performedBy: req.user?._id,
+      });
+    }
     res.json({ success: true, product: toProductObject(product) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

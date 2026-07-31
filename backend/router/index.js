@@ -8,6 +8,7 @@ const orderRoute = require("./order.route");
 const advertisementRoute = require("./advertisement.route");
 const contactRoute = require("./contact.route");
 const couponRoute = require("./coupon.route");
+const inventoryRoute = require("./inventory.route");
 const statsController = require("../controller/stats.controller");
 const settingsController = require("../controller/settings.controller");
 const { protect, admin } = require("../middleware/auth.middleware");
@@ -26,6 +27,7 @@ router.use("/orders", orderRoute);
 router.use("/advertisements", advertisementRoute);
 router.use("/contact", contactRoute);
 router.use("/coupons", couponRoute);
+router.use("/inventory", inventoryRoute);
 
 // Stats (admin)
 router.get("/stats", protect, admin, statsController.getStats);

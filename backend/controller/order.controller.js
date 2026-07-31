@@ -1,4 +1,4 @@
-const { Order, Product } = require("../model");
+const { Order, Product, StockMovement } = require("../model");
 
 const STATUS_FLOW = ["pending", "processing", "shipped", "delivered", "cancelled"];
 
@@ -43,8 +43,14 @@ exports.createOrder = async (req, res) => {
         size: item.size,
         color: item.color,
       });
-      product.stock -= item.quantity;
-      await product.save();
+      // Atomic condition prevents two concurrent checkout requests overselling.
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: product._id, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+      if (!updatedProduct) return res.status(400).json({ success: false, message: `${product.name} no longer has enough stock` });
+      await StockMovement.create({ product: product._id, type: "sale", quantity: -item.quantity, previousStock: updatedProduct.stock + item.quantity, resultingStock: updatedProduct.stock, reason: "Order placed" });
     }
 
     const shippingPrice = itemsPrice > 999 ? 0 : 49;
@@ -175,7 +181,8 @@ exports.cancelOrder = async (req, res) => {
 
     // Restock items
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+      const product = await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } }, { new: true });
+      if (product) await StockMovement.create({ product: product._id, type: "return", quantity: item.quantity, previousStock: product.stock - item.quantity, resultingStock: product.stock, reason: "Order cancelled", reference: order._id.toString(), performedBy: req.user._id });
     }
 
     order.status = "cancelled";
