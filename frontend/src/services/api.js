@@ -253,6 +253,69 @@ export const advertisementAPI = {
     }),
 };
 
+// Coupon APIs
+export const couponAPI = {
+  // Public — validate coupon at checkout (token optional for per-user limit check)
+  validate: (data) =>
+    apiCall("/coupons/validate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  // Public — get all coupons with eligibility for current subtotal
+  getPublic: (subtotal = 0) =>
+    apiCall(`/coupons/public?subtotal=${subtotal}`),
+  // Admin
+  getAll: () => apiCall("/coupons"),
+  getById: (id) => apiCall(`/coupons/${id}`),
+  create: (data) =>
+    apiCall("/coupons", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id, data) =>
+    apiCall(`/coupons/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  toggle: (id) =>
+    apiCall(`/coupons/${id}/toggle`, {
+      method: "PUT",
+    }),
+  delete: (id) =>
+    apiCall(`/coupons/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+// Contact APIs
+export const contactAPI = {
+  submit: (data) =>
+    apiCall("/contact", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  // Admin
+  getAll: (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return apiCall(`/contact${query}`);
+  },
+  getById: (id) => apiCall(`/contact/${id}`),
+  update: (id, data) =>
+    apiCall(`/contact/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  delete: (id) =>
+    apiCall(`/contact/${id}`, {
+      method: "DELETE",
+    }),
+  getUnreadCount: () => apiCall("/contact/unread-count"),
+};
+
 // Seed API
 export const seedAPI = {
   seedDatabase: () =>
@@ -269,5 +332,7 @@ export default {
   statsAPI,
   settingsAPI,
   advertisementAPI,
+  couponAPI,
+  contactAPI,
   seedAPI,
 };

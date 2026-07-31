@@ -6,6 +6,8 @@ const categoryRoute = require("./category.route");
 const productRoute = require("./product.route");
 const orderRoute = require("./order.route");        
 const advertisementRoute = require("./advertisement.route");
+const contactRoute = require("./contact.route");
+const couponRoute = require("./coupon.route");
 const statsController = require("../controller/stats.controller");
 const settingsController = require("../controller/settings.controller");
 const { protect, admin } = require("../middleware/auth.middleware");
@@ -22,6 +24,8 @@ router.use("/categories", categoryRoute);
 router.use("/products", productRoute);
 router.use("/orders", orderRoute);
 router.use("/advertisements", advertisementRoute);
+router.use("/contact", contactRoute);
+router.use("/coupons", couponRoute);
 
 // Stats (admin)
 router.get("/stats", protect, admin, statsController.getStats);

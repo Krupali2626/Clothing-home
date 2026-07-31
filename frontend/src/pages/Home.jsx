@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
 import { FaArrowRight, FaBolt } from "react-icons/fa";
@@ -36,13 +36,9 @@ const SectionHeader = ({ eyebrow, title, subtitle, to }) => (
 );
 
 const Home = () => {
-  const { products, categories: apiCategories, fetchProducts, fetchCategories } = useShop();
+  const { products, categories: apiCategories } = useShop();
 
-  // Fetch products and categories from API on component mount
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [fetchProducts, fetchCategories]);
+  // Products and categories are already fetched by ShopContext on mount
 
   // Use API categories if available
   const displayCategories = apiCategories.length > 0 ? apiCategories.slice(0, 12) : [];

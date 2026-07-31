@@ -22,7 +22,7 @@ import "./Header.css";
 
 const Header = () => {
   const navigate = useNavigate();
-  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout, categories, fetchCategories } = useShop();
+  const { globalSearch, setGlobalSearch, wishlist, cart, isAuthenticated, user, logout, categories } = useShop();
   const [scrolled, setScrolled] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
@@ -33,10 +33,7 @@ const Header = () => {
   const [hoveredCat, setHoveredCat] = useState(null);
   const searchContainerRef = useRef(null);
 
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  // Fetch categories on mount — already called by ShopContext, no need to re-fetch here
 
   // Filter categories by type
   const clothingCats = useMemo(() => categories.filter((c) => c.type === "clothing"), [categories]);

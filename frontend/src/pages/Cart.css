@@ -379,3 +379,149 @@
     display: none;
   }
 }
+
+/* ── Coupon applied state in Cart ───────────────────────────────────────────── */
+.d_coupon_wrap_applied {
+  background: #eaf7ec;
+  border: 1.5px solid #b7dfbb;
+  border-radius: 10px;
+  gap: 10px;
+}
+
+.d_coupon_applied_text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.d_coupon_applied_text strong {
+  font-size: 0.88rem;
+  letter-spacing: 0.06em;
+  color: #1e7e34;
+}
+
+.d_coupon_applied_text span {
+  font-size: 0.77rem;
+  color: #2d6a35;
+}
+
+.d_coupon_remove_inline {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.d_coupon_remove_inline:hover { color: #dc3545; }
+
+/* ── Available offers toggle ─────────────────────────────────────────────────── */
+.d_cart_coupon_offers {
+  margin-top: 0.5rem;
+}
+
+.d_coupon_view_all_btn {
+  background: none;
+  border: none;
+  color: #0d6efd;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: underline;
+}
+.d_coupon_view_all_btn:hover { color: #0a58ca; }
+
+/* ── Coupon list (shared with Checkout) ─────────────────────────────────────── */
+.d_coupon_list {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.d_coupon_list_item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 9px;
+  border: 1.5px dashed #dee2e6;
+  background: #fff;
+}
+
+.d_coupon_list_item_active {
+  border-color: #28a745;
+  background: #f6fff8;
+}
+
+.d_coupon_list_item_disabled {
+  opacity: 0.72;
+  background: #fafafa;
+}
+
+.d_coupon_list_left { flex: 1; min-width: 0; }
+
+.d_coupon_list_code {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: 0.07em;
+  color: #222;
+  margin-bottom: 3px;
+}
+
+.d_coupon_list_desc { font-size: 0.77rem; color: #444; margin: 0 0 2px; }
+.d_coupon_list_min,
+.d_coupon_list_expiry { font-size: 0.72rem; color: #888; margin: 0; }
+.d_coupon_list_reason { font-size: 0.72rem; color: #dc3545; margin: 3px 0 0; font-weight: 500; }
+
+.d_coupon_list_right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.d_coupon_list_saving {
+  font-size: 0.72rem;
+  color: #1e7e34;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.d_coupon_list_apply_btn {
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.77rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.d_coupon_list_apply_btn:hover:not(:disabled) { background: #444; }
+.d_coupon_list_apply_btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.d_coupon_list_na { font-size: 0.74rem; color: #aaa; font-weight: 600; }
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+/* Summary discount row */
+.d_summary_discount { color: #1e7e34; font-weight: 600; }
+.d_summary_discount span:last-child { color: #1e7e34; }

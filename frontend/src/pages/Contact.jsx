@@ -11,7 +11,9 @@ import {
   FaCheckCircle,
   FaWhatsapp,
   FaFacebookMessenger,
+  FaSpinner,
 } from "react-icons/fa";
+import { contactAPI } from "../services/api";
 import "./Contact.css";
 
 const contactDetails = [
@@ -47,6 +49,8 @@ const Contact = () => {
   });
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const validate = () => {
     const e = {};
@@ -65,14 +69,23 @@ const Contact = () => {
     setErrors((er) => ({ ...er, [name]: undefined }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-    setSubmitted(true);
+    setSubmitting(true);
+    setServerError("");
+    try {
+      await contactAPI.submit(form);
+      setSubmitted(true);
+    } catch (err) {
+      setServerError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -228,8 +241,25 @@ const Contact = () => {
                       </Form.Group>
                     </Col>
                     <Col xs={12}>
-                      <button type="submit" className="d_btn_primary">
-                        Send Message <FaPaperPlane size={13} />
+                      {serverError && (
+                        <div className="alert alert-danger py-2 mb-2" role="alert">
+                          {serverError}
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        className="d_btn_primary"
+                        disabled={submitting}
+                      >
+                        {submitting ? (
+                          <>
+                            <FaSpinner className="spin me-2" size={13} /> Sending…
+                          </>
+                        ) : (
+                          <>
+                            Send Message <FaPaperPlane size={13} />
+                          </>
+                        )}
                       </button>
                     </Col>
                   </Row>
@@ -246,7 +276,7 @@ const Contact = () => {
                   width="100%"
                   height="300"
                   style={{ border: 0 }}
-                  allowFullScreen
+                  allowFullScreen     
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />

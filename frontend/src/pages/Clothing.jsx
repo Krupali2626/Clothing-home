@@ -240,7 +240,6 @@ const Clothing = () => {
     loading,
     fetchProducts,
     categories: apiCategories,
-    fetchCategories,
   } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -265,8 +264,8 @@ const Clothing = () => {
   const [search, setSearch] = useState(initSearch);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchProducts();
+  }, [fetchProducts]);
 
   const clothingCats = useMemo(() => {
     let cats = apiCategories.filter((c) => c.type === "clothing");

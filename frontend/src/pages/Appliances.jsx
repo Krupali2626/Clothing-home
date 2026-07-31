@@ -202,7 +202,6 @@ const Appliances = () => {
     loading,
     fetchProducts,
     categories: apiCategories,
-    fetchCategories,
   } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -226,8 +225,8 @@ const Appliances = () => {
   const [search, setSearch] = useState(initSearch);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchProducts();
+  }, [fetchProducts]);
 const applianceProducts = useMemo(() => {
     return products.filter(
       (p) => p.type === "appliance" || p.type === "appliances",

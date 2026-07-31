@@ -23,6 +23,7 @@ import {
   FaSave,
   FaList,
   FaBullhorn,
+  FaTag,
 } from "react-icons/fa";
 import "./AdminPanel.css";
 import "./AdminPanelForms.css";
@@ -34,6 +35,7 @@ import {
   statsAPI,
   settingsAPI,
   advertisementAPI,
+  couponAPI,
 } from "../services/api";
 import { useShop } from "../context/ShopContext";
 
@@ -74,6 +76,8 @@ const AdminPanel = () => {
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [ads, setAds] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [settings, setSettings] = useState({
     storeName: "D.Store",
     storeEmail: "info@store.com",
@@ -228,6 +232,18 @@ const AdminPanel = () => {
     }
   };
 
+  const loadCoupons = async () => {
+    try {
+      setLoadingCoupons(true);
+      const res = await couponAPI.getAll();
+      setCoupons(res.coupons || []);
+    } catch (err) {
+      console.error("Failed to load coupons:", err);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
   const loadSettings = async () => {
     try {
       const res = await settingsAPI.getSettings();
@@ -264,6 +280,7 @@ const AdminPanel = () => {
     loadOrders();
     loadUsers();
     loadAds();
+    loadCoupons();
     loadSettings();
     loadAdminProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -310,6 +327,21 @@ const AdminPanel = () => {
         priority: 0,
         status: "active",
       });
+    } else if (type === "coupon") {
+      setForm({
+        code: "",
+        description: "",
+        discountType: "percentage",
+        discountValue: "",
+        minOrderAmount: "",
+        maxDiscountAmount: "",
+        usageLimit: "",
+        perUserLimit: "1",
+        validFrom: new Date().toISOString().slice(0, 10),
+        validUntil: "",
+        applicableFor: "all",
+        isActive: true,
+      });
     }
     openModal(type, "add");
   };
@@ -341,6 +373,21 @@ const AdminPanel = () => {
         type: item.type || "general",
         priority: item.priority || 0,
         status: item.status || "active",
+      });
+    } else if (type === "coupon") {
+      setForm({
+        code: item.code || "",
+        description: item.description || "",
+        discountType: item.discountType || "percentage",
+        discountValue: item.discountValue ?? "",
+        minOrderAmount: item.minOrderAmount ?? "",
+        maxDiscountAmount: item.maxDiscountAmount ?? "",
+        usageLimit: item.usageLimit ?? "",
+        perUserLimit: item.perUserLimit ?? 1,
+        validFrom: item.validFrom ? item.validFrom.slice(0, 10) : "",
+        validUntil: item.validUntil ? item.validUntil.slice(0, 10) : "",
+        applicableFor: item.applicableFor || "all",
+        isActive: item.isActive !== false,
       });
     } else {
       setForm({ ...item });
@@ -418,6 +465,29 @@ const AdminPanel = () => {
           await advertisementAPI.createAdvertisement(payload);
         }
         await loadAds();
+      } else if (type === "coupon") {
+        const payload = {
+          code: (form.code || "").trim().toUpperCase(),
+          description: form.description || "",
+          discountType: form.discountType || "percentage",
+          discountValue: Number(form.discountValue) || 0,
+          minOrderAmount: Number(form.minOrderAmount) || 0,
+          maxDiscountAmount: form.maxDiscountAmount !== "" ? Number(form.maxDiscountAmount) : null,
+          usageLimit: form.usageLimit !== "" ? Number(form.usageLimit) : null,
+          perUserLimit: Number(form.perUserLimit) || 1,
+          validFrom: form.validFrom || new Date().toISOString(),
+          validUntil: form.validUntil || null,
+          applicableFor: form.applicableFor || "all",
+          isActive: !!form.isActive,
+        };
+        if (!payload.code) { alert("Coupon code is required"); return; }
+        if (!payload.discountValue || payload.discountValue <= 0) { alert("Discount value must be greater than 0"); return; }
+        if (modal.data && (modal.data._id || modal.data.id)) {
+          await couponAPI.update(modal.data._id || modal.data.id, payload);
+        } else {
+          await couponAPI.create(payload);
+        }
+        await loadCoupons();
       }
       closeModal();
     } catch (err) {
@@ -434,6 +504,7 @@ const AdminPanel = () => {
       else if (type === "category") await categoryAPI.deleteCategory(id);
       else if (type === "ad") await advertisementAPI.deleteAdvertisement(id);
       else if (type === "order") await orderAPI.deleteOrder(id);
+      else if (type === "coupon") await couponAPI.delete(id);
 
       if (type === "product") {
         await loadProducts();
@@ -445,6 +516,7 @@ const AdminPanel = () => {
         await loadCategories();
         await loadProducts();
       } else if (type === "ad") await loadAds();
+      else if (type === "coupon") await loadCoupons();
       else if (type === "order") {
         await loadOrders();
         await loadStats();
@@ -640,6 +712,11 @@ const AdminPanel = () => {
                   <Nav.Item>
                     <Nav.Link eventKey="ads" className={`d_admin_sidebar_link ${activeTab === "ads" ? "active" : ""}`}>
                       <FaBullhorn /> Advertisements
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="coupons" className={`d_admin_sidebar_link ${activeTab === "coupons" ? "active" : ""}`}>
+                      <FaTag /> Coupons
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
@@ -1025,6 +1102,87 @@ const AdminPanel = () => {
                     </div>
                   </Tab.Pane>
 
+                  {/* Coupons */}
+                  <Tab.Pane eventKey="coupons">
+                    <div className="d_myaccount_card">
+                      <div className="d_myaccount_card_header">
+                        <h4>Coupons</h4>
+                        <button className="d_btn_primary" onClick={() => openAdd("coupon")}>
+                          <FaPlus /> Add Coupon
+                        </button>
+                      </div>
+                      <div className="d_myaccount_card_body">
+                        <div className="d_table_wrapper">
+                          <Table className="d_admin_table">
+                            <thead>
+                              <tr>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Discount</th>
+                                <th>Min Order</th>
+                                <th>Used / Limit</th>
+                                <th>Valid Until</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {loadingCoupons ? (
+                                <tr><td colSpan={8} className="text-center">Loading coupons…</td></tr>
+                              ) : coupons.length === 0 ? (
+                                <tr><td colSpan={8} className="text-center">No coupons found.</td></tr>
+                              ) : (
+                                coupons.map((c) => (
+                                  <tr key={c._id}>
+                                    <td><strong style={{ letterSpacing: "0.05em" }}>{c.code}</strong></td>
+                                    <td>{c.discountType === "percentage" ? "%" : "₹ Flat"}</td>
+                                    <td>
+                                      {c.discountType === "percentage"
+                                        ? `${c.discountValue}%${c.maxDiscountAmount ? ` (max ₹${c.maxDiscountAmount})` : ""}`
+                                        : `₹${c.discountValue}`}
+                                    </td>
+                                    <td>{c.minOrderAmount > 0 ? `₹${c.minOrderAmount}` : "—"}</td>
+                                    <td>{c.usedCount} / {c.usageLimit ?? "∞"}</td>
+                                    <td>{c.validUntil ? new Date(c.validUntil).toLocaleDateString("en-IN") : "No expiry"}</td>
+                                    <td>
+                                      <Badge className={c.isActive ? "d_status_active" : "d_status_inactive"}>
+                                        {c.isActive ? "Active" : "Inactive"}
+                                      </Badge>
+                                    </td>
+                                    <td>
+                                      <div className="d_table_actions">
+                                        <button
+                                          className="d_table_action_btn"
+                                          title={c.isActive ? "Deactivate" : "Activate"}
+                                          onClick={async () => {
+                                            try { await couponAPI.toggle(c._id); await loadCoupons(); }
+                                            catch (err) { alert("Failed: " + err.message); }
+                                          }}
+                                        >
+                                          {c.isActive ? <FaToggleOn style={{ color: "#28a745" }} /> : <FaToggleOff style={{ color: "#aaa" }} />}
+                                        </button>
+                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("coupon", c)}>
+                                          <FaEdit />
+                                        </button>
+                                        <button
+                                          className="d_table_action_btn d_table_action_btn_delete"
+                                          title="Delete"
+                                          onClick={() => handleDelete("coupon", c._id)}
+                                        >
+                                          <FaTrash />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+                  </Tab.Pane>
+
                   {/* Settings */}
                   <Tab.Pane eventKey="settings">
                     <div className="d_myaccount_card">
@@ -1124,7 +1282,9 @@ const AdminPanel = () => {
                   ? "Add User"
                   : modal.type === "ad"
                     ? "Add Advertisement"
-                    : "Add")}
+                    : modal.type === "coupon"
+                      ? "Add Coupon"
+                      : "Add")}
             {modal.mode === "edit" &&
               (modal.type === "product"
                 ? "Edit Product"
@@ -1134,7 +1294,9 @@ const AdminPanel = () => {
                     ? "Update Order"
                     : modal.type === "ad"
                       ? "Edit Advertisement"
-                      : "Edit Category")}
+                      : modal.type === "coupon"
+                        ? "Edit Coupon"
+                        : "Edit Category")}
             {modal.mode === "view" &&
               (modal.type === "product"
                 ? "Product Details"
@@ -1445,6 +1607,128 @@ const AdminPanel = () => {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </Form.Select>
+              </Form.Group>
+            </Form>
+          )}
+
+          {/* COUPON */}
+          {modal.type === "coupon" && (
+            <Form className="d_admin_form">
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Coupon Code <span className="text-danger">*</span></Form.Label>
+                    <Form.Control
+                      name="code"
+                      value={form.code || ""}
+                      onChange={handleFormChange}
+                      placeholder="e.g. SAVE20"
+                      style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Description</Form.Label>
+                    <Form.Control name="description" value={form.description || ""} onChange={handleFormChange} placeholder="e.g. 20% off on all orders" />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Discount Type <span className="text-danger">*</span></Form.Label>
+                    <Form.Select name="discountType" value={form.discountType || "percentage"} onChange={handleFormChange}>
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="flat">Flat Amount (₹)</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>
+                      Discount Value <span className="text-danger">*</span>
+                      <span className="text-muted ms-1" style={{ fontSize: "0.78rem" }}>
+                        {form.discountType === "flat" ? "(₹ amount)" : "(% percentage)"}
+                      </span>
+                    </Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="discountValue"
+                      value={form.discountValue ?? ""}
+                      onChange={handleFormChange}
+                      placeholder={form.discountType === "flat" ? "e.g. 100" : "e.g. 20"}
+                      min="1"
+                      max={form.discountType === "percentage" ? "100" : undefined}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Min Order Amount (₹)</Form.Label>
+                    <Form.Control type="number" name="minOrderAmount" value={form.minOrderAmount ?? ""} onChange={handleFormChange} placeholder="0 = no minimum" min="0" />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Max Discount Cap (₹) <span className="text-muted" style={{ fontSize: "0.78rem" }}>(% type only)</span></Form.Label>
+                    <Form.Control type="number" name="maxDiscountAmount" value={form.maxDiscountAmount ?? ""} onChange={handleFormChange} placeholder="Leave blank = no cap" min="0" disabled={form.discountType === "flat"} />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="g-3">
+                <Col md={4}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Total Usage Limit</Form.Label>
+                    <Form.Control type="number" name="usageLimit" value={form.usageLimit ?? ""} onChange={handleFormChange} placeholder="Blank = unlimited" min="1" />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Per User Limit</Form.Label>
+                    <Form.Control type="number" name="perUserLimit" value={form.perUserLimit ?? 1} onChange={handleFormChange} min="1" />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Applicable For</Form.Label>
+                    <Form.Select name="applicableFor" value={form.applicableFor || "all"} onChange={handleFormChange}>
+                      <option value="all">All Products</option>
+                      <option value="clothing">Clothing Only</option>
+                      <option value="appliance">Appliances Only</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Valid From</Form.Label>
+                    <Form.Control type="date" name="validFrom" value={form.validFrom || ""} onChange={handleFormChange} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="d_admin_form_group">
+                    <Form.Label>Valid Until <span className="text-muted" style={{ fontSize: "0.78rem" }}>(blank = no expiry)</span></Form.Label>
+                    <Form.Control type="date" name="validUntil" value={form.validUntil || ""} onChange={handleFormChange} />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Form.Group className="d_admin_form_group">
+                <Form.Check
+                  type="checkbox"
+                  name="isActive"
+                  label="Active (coupon is live and can be used)"
+                  checked={!!form.isActive}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
             </Form>
           )}

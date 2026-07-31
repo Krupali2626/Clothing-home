@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { productAPI, userAPI, categoryAPI, orderAPI } from "../services/api";
 
@@ -9,13 +9,13 @@ const ShopContext = createContext();
 
 export const ShopProvider = ({ children }) => {
   const navigate = useNavigate();
-   
+
   // State - Products & Categories
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-   
+
   // State - Cart & Wishlist
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -35,7 +35,7 @@ export const ShopProvider = ({ children }) => {
   });
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [globalSearch, setGlobalSearch] = useState("");
-   
+
   // State - User & Auth
   const [user, setUser] = useState(() => {
     try {
@@ -50,7 +50,7 @@ export const ShopProvider = ({ children }) => {
   const [orders, setOrders] = useState([]);
 
   // Fetch products from backend
-  const fetchProducts = async (filters = {}) => {
+  const fetchProducts = useCallback(async (filters = {}) => {
     try {
       setLoading(true);
       setError(null);
@@ -63,30 +63,30 @@ export const ShopProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Fetch categories from backend
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await categoryAPI.getAllCategories();
       setCategories(response.categories || []);
     } catch (err) {
       console.error("Failed to fetch categories:", err);
     }
-  };
+  }, []);
 
   // Fetch wishlist from backend
-  const fetchWishlist = async () => {
+  const fetchWishlist = useCallback(async () => {
     try {
       const response = await userAPI.getWishlist();
       setWishlist(response.wishlist || []);
     } catch (err) {
       console.error("Failed to fetch wishlist:", err);
     }
-  };
+  }, []);
 
   // Fetch user profile if authenticated
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       const response = await userAPI.getProfile();
       setUser(response.user);
@@ -95,20 +95,23 @@ export const ShopProvider = ({ children }) => {
       await fetchWishlist();
     } catch (err) {
       console.error("Failed to fetch profile:", err);
+      // Token is expired or invalid — clear it so we don't retry on every load
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
       setUser(null);
       setIsAuthenticated(false);
     }
-  };
+  }, [fetchWishlist]);
 
   // Fetch user orders
-  const fetchUserOrders = async () => {
+  const fetchUserOrders = useCallback(async () => {
     try {
       const response = await orderAPI.getMyOrders();
       setOrders(response.orders || []);
     } catch (err) {
       console.error("Failed to fetch orders:", err);
     }
-  };
+  }, []);
 
   // Persist cart to localStorage
   useEffect(() => {
@@ -124,7 +127,7 @@ export const ShopProvider = ({ children }) => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-    
+
     // Check if user is authenticated
     const token = localStorage.getItem("authToken");
     if (token) {
@@ -332,7 +335,7 @@ export const ShopProvider = ({ children }) => {
         error,
         fetchProducts,
         fetchCategories,
-        
+
         // User & Auth
         user,
         isAuthenticated,
@@ -344,7 +347,7 @@ export const ShopProvider = ({ children }) => {
         updateProfile,
         fetchUserOrders,
         requireAuth,
-        
+
         // Wishlist
         wishlist,
         addToWishlist,
@@ -352,7 +355,7 @@ export const ShopProvider = ({ children }) => {
         clearWishlist,
         isInWishlist,
         fetchWishlist,
-        
+
         // Cart
         cart,
         addToCart,
@@ -360,7 +363,7 @@ export const ShopProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         createOrder,
-        
+
         // Quick View & Search
         quickViewProduct,
         globalSearch,
