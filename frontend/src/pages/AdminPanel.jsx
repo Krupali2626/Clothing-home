@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Row, Col, Nav, Tab, Table, Badge, Card, Modal, Form, Button } from "react-bootstrap";
+import {
+  Row,
+  Col,
+  Nav,
+  Tab,
+  Table,
+  Badge,
+  Card,
+  Modal,
+  Form,
+  Button,
+  Pagination,
+} from "react-bootstrap";
 import {
   FaUser,
   FaChartBar,
@@ -38,8 +50,10 @@ import {
   couponAPI,
 } from "../services/api";
 import { useShop } from "../context/ShopContext";
+import InventoryManagement from "./InventoryManagement";
 
-const formatStatus = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Pending");
+const formatStatus = (s) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1) : "Pending";
 const toStatusKey = (s) => String(s || "pending").toLowerCase();
 
 const formatPct = (n) => {
@@ -47,10 +61,14 @@ const formatPct = (n) => {
   return `${v >= 0 ? "+" : ""}${v}%`;
 };
 
+const PRODUCTS_PER_PAGE = 6;
+const ORDERS_PER_PAGE = 6;
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user: authUser, logout } = useShop();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -65,14 +83,44 @@ const AdminPanel = () => {
   });
 
   const [stats, setStats] = useState([
-    { id: 1, title: "Total Revenue", value: "₹0", change: "0%", trend: "up", icon: FaDollarSign },
-    { id: 2, title: "Total Orders", value: "0", change: "0%", trend: "up", icon: FaShoppingCart },
-    { id: 3, title: "Total Products", value: "0", change: "0%", trend: "up", icon: FaBox },
-    { id: 4, title: "Total Users", value: "0", change: "0%", trend: "up", icon: FaUsers },
+    {
+      id: 1,
+      title: "Total Revenue",
+      value: "₹0",
+      change: "0%",
+      trend: "up",
+      icon: FaDollarSign,
+    },
+    {
+      id: 2,
+      title: "Total Orders",
+      value: "0",
+      change: "0%",
+      trend: "up",
+      icon: FaShoppingCart,
+    },
+    {
+      id: 3,
+      title: "Total Products",
+      value: "0",
+      change: "0%",
+      trend: "up",
+      icon: FaBox,
+    },
+    {
+      id: 4,
+      title: "Total Users",
+      value: "0",
+      change: "0%",
+      trend: "up",
+      icon: FaUsers,
+    },
   ]);
 
   const [orders, setOrders] = useState([]);
+  const [orderPage, setOrderPage] = useState(1);
   const [products, setProducts] = useState([]);
+  const [productPage, setProductPage] = useState(1);
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [ads, setAds] = useState([]);
@@ -97,7 +145,11 @@ const AdminPanel = () => {
     customer: o.user?.name || o.customer || "Unknown",
     email: o.user?.email || o.email || "",
     date: o.createdAt
-      ? new Date(o.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      ? new Date(o.createdAt).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
       : o.date || "",
     total: o.totalPrice ?? o.total ?? 0,
     status: toStatusKey(o.status),
@@ -116,6 +168,7 @@ const AdminPanel = () => {
       setLoadingProducts(true);
       const res = await productAPI.getAllProducts({ limit: 200 });
       setProducts(res.products || []);
+      setProductPage(1);
     } catch (err) {
       console.error("Failed to load products:", err);
     } finally {
@@ -183,9 +236,12 @@ const AdminPanel = () => {
   const loadOrders = async (status = orderStatusFilter) => {
     try {
       setLoadingOrders(true);
-      const res = await orderAPI.getAllOrders(status && status !== "all" ? { status } : {});
+      const res = await orderAPI.getAllOrders(
+        status && status !== "all" ? { status } : {},
+      );
       if (res.success && res.orders) {
         setOrders(res.orders.map(mapOrder));
+        setOrderPage(1);
       }
     } catch (err) {
       console.error("Failed to load orders:", err);
@@ -207,10 +263,13 @@ const AdminPanel = () => {
             phone: u.phone || "",
             role: u.role === "admin" ? "Admin" : "Customer",
             joined: u.createdAt
-              ? new Date(u.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+              ? new Date(u.createdAt).toLocaleDateString("en-IN", {
+                  month: "short",
+                  year: "numeric",
+                })
               : "",
             status: u.status === "active" ? "Active" : "Inactive",
-          }))
+          })),
         );
       }
     } catch (err) {
@@ -274,6 +333,10 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
+    const expiryTimer = setInterval(() => {
+      setCurrentTime(Date.now());
+      loadCoupons();
+    }, 60000);
     loadProducts();
     loadCategories();
     loadStats();
@@ -283,6 +346,7 @@ const AdminPanel = () => {
     loadCoupons();
     loadSettings();
     loadAdminProfile();
+    return () => clearInterval(expiryTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -291,7 +355,10 @@ const AdminPanel = () => {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const openAdd = (type) => {
@@ -316,7 +383,14 @@ const AdminPanel = () => {
         flashSale: false,
       });
     } else if (type === "user") {
-      setForm({ name: "", email: "", phone: "", password: "", role: "Customer", status: "Active" });
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        role: "Customer",
+        status: "Active",
+      });
     } else if (type === "ad") {
       setForm({
         title: "",
@@ -352,13 +426,21 @@ const AdminPanel = () => {
       const looksLikeObjectId = /^[0-9a-fA-F]{24}$/.test(item.category || "");
       const categoryId = looksLikeObjectId
         ? item.category
-        : categories.find((c) => c.slug === item.category || c.name === item.category)?._id || item.category || "";
+        : categories.find(
+            (c) => c.slug === item.category || c.name === item.category,
+          )?._id ||
+          item.category ||
+          "";
       setForm({
         ...item,
         category: categoryId,
         image: item.image || (item.images && item.images[0]) || "",
-        colors: Array.isArray(item.colors) ? item.colors.join(", ") : item.colors || "",
-        sizes: Array.isArray(item.sizes) ? item.sizes.join(", ") : item.sizes || "",
+        colors: Array.isArray(item.colors)
+          ? item.colors.join(", ")
+          : item.colors || "",
+        sizes: Array.isArray(item.sizes)
+          ? item.sizes.join(", ")
+          : item.sizes || "",
         description: item.description || "",
         featured: !!item.featured,
         bestSeller: !!item.bestSeller,
@@ -425,7 +507,10 @@ const AdminPanel = () => {
           flashSale: !!form.flashSale,
         };
         if (modal.data && (modal.data.id || modal.data._id)) {
-          await productAPI.updateProduct(modal.data.id || modal.data._id, payload);
+          await productAPI.updateProduct(
+            modal.data.id || modal.data._id,
+            payload,
+          );
         } else {
           await productAPI.createProduct(payload);
         }
@@ -462,7 +547,10 @@ const AdminPanel = () => {
           status: form.status || "active",
         };
         if (modal.data && (modal.data._id || modal.data.id)) {
-          await advertisementAPI.updateAdvertisement(modal.data._id || modal.data.id, payload);
+          await advertisementAPI.updateAdvertisement(
+            modal.data._id || modal.data.id,
+            payload,
+          );
         } else {
           await advertisementAPI.createAdvertisement(payload);
         }
@@ -474,7 +562,10 @@ const AdminPanel = () => {
           discountType: form.discountType || "percentage",
           discountValue: Number(form.discountValue) || 0,
           minOrderAmount: Number(form.minOrderAmount) || 0,
-          maxDiscountAmount: form.maxDiscountAmount !== "" ? Number(form.maxDiscountAmount) : null,
+          maxDiscountAmount:
+            form.maxDiscountAmount !== ""
+              ? Number(form.maxDiscountAmount)
+              : null,
           usageLimit: form.usageLimit !== "" ? Number(form.usageLimit) : null,
           perUserLimit: Number(form.perUserLimit) || 1,
           validFrom: form.validFrom || new Date().toISOString(),
@@ -482,8 +573,14 @@ const AdminPanel = () => {
           applicableFor: form.applicableFor || "all",
           isActive: !!form.isActive,
         };
-        if (!payload.code) { alert("Coupon code is required"); return; }
-        if (!payload.discountValue || payload.discountValue <= 0) { alert("Discount value must be greater than 0"); return; }
+        if (!payload.code) {
+          alert("Coupon code is required");
+          return;
+        }
+        if (!payload.discountValue || payload.discountValue <= 0) {
+          alert("Discount value must be greater than 0");
+          return;
+        }
         if (modal.data && (modal.data._id || modal.data.id)) {
           await couponAPI.update(modal.data._id || modal.data.id, payload);
         } else {
@@ -537,12 +634,21 @@ const AdminPanel = () => {
       await loadStats();
     } catch (err) {
       console.error("Failed to update order status:", err);
-      alert("Failed to update order status: " + (err.message || "Server error"));
+      alert(
+        "Failed to update order status: " + (err.message || "Server error"),
+      );
     }
   };
 
   const openCategoryModal = (mode, data = null) => {
-    const empty = { name: "", slug: "", type: "clothing", image: "", description: "", status: "active" };
+    const empty = {
+      name: "",
+      slug: "",
+      type: "clothing",
+      image: "",
+      description: "",
+      status: "active",
+    };
     setForm(mode === "add" ? empty : { ...data });
     openModal("category", mode, data);
   };
@@ -555,7 +661,12 @@ const AdminPanel = () => {
     try {
       const payload = {
         name: form.name,
-        slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        slug:
+          form.slug ||
+          form.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, ""),
         type: form.type || "clothing",
         image: form.image || "",
         description: form.description || "",
@@ -594,67 +705,135 @@ const AdminPanel = () => {
 
   const isView = modal.mode === "view";
 
-  const renderOrdersTable = (list) => (
-    <div className="d_table_wrapper">
-      <Table className="d_admin_table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loadingOrders ? (
+  const renderOrdersTable = (list, showPagination = false) => {
+    const totalPages = Math.max(1, Math.ceil(list.length / ORDERS_PER_PAGE));
+    const visibleOrders = showPagination
+      ? list.slice(
+          (orderPage - 1) * ORDERS_PER_PAGE,
+          orderPage * ORDERS_PER_PAGE,
+        )
+      : list;
+
+    return (
+      <div className="d_table_wrapper">
+        <Table className="d_admin_table">
+          <thead>
             <tr>
-              <td colSpan={6} className="text-center">
-                Loading orders…
-              </td>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
-          ) : list.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="text-center">
-                No orders found.
-              </td>
-            </tr>
-          ) : (
-            list.map((order) => (
-              <tr key={order._id || order.id}>
-                <td>{order.id}</td>
-                <td>{order.customer}</td>
-                <td>{order.date}</td>
-                <td>₹{Number(order.total).toLocaleString("en-IN")}</td>
-                <td>
-                  <Badge className={`d_status_${order.status}`}>{formatStatus(order.status)}</Badge>
-                </td>
-                <td>
-                  <div className="d_table_actions">
-                    <button className="d_table_action_btn" title="View" onClick={() => openModal("order", "view", order)}>
-                      <FaEye />
-                    </button>
-                    <button className="d_table_action_btn" title="Edit" onClick={() => openModal("order", "edit", order)}>
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="d_table_action_btn d_table_action_btn_delete"
-                      title="Delete"
-                      onClick={() => handleDelete("order", order._id)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
+          </thead>
+          <tbody>
+            {loadingOrders ? (
+              <tr>
+                <td colSpan={6} className="text-center">
+                  Loading orders…
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </Table>
-    </div>
-  );
+            ) : list.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center">
+                  No orders found.
+                </td>
+              </tr>
+            ) : (
+              visibleOrders.map((order) => (
+                <tr key={order._id || order.id}>
+                  <td>{order.id}</td>
+                  <td>{order.customer}</td>
+                  <td>{order.date}</td>
+                  <td>₹{Number(order.total).toLocaleString("en-IN")}</td>
+                  <td>
+                    <Badge className={`d_status_${order.status}`}>
+                      {formatStatus(order.status)}
+                    </Badge>
+                  </td>
+                  <td>
+                    <div className="d_table_actions">
+                      <button
+                        className="d_table_action_btn"
+                        title="View"
+                        onClick={() => openModal("order", "view", order)}
+                      >
+                        <FaEye />
+                      </button>
+                      <button
+                        className="d_table_action_btn"
+                        title="Edit"
+                        onClick={() => openModal("order", "edit", order)}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="d_table_action_btn d_table_action_btn_delete"
+                        title="Delete"
+                        onClick={() => handleDelete("order", order._id)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+        {showPagination && list.length > ORDERS_PER_PAGE && (
+          <div className="d_admin_pagination_wrapper">
+            <small className="text-muted">
+              Showing {(orderPage - 1) * ORDERS_PER_PAGE + 1}-
+              {Math.min(orderPage * ORDERS_PER_PAGE, list.length)} of{" "}
+              {list.length}
+            </small>
+            <Pagination className="d_admin_pagination mb-0">
+              <Pagination.First
+                disabled={orderPage === 1}
+                onClick={() => setOrderPage(1)}
+              />
+              <Pagination.Prev
+                disabled={orderPage === 1}
+                onClick={() => setOrderPage((page) => Math.max(1, page - 1))}
+              />
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <Pagination.Item
+                    key={page}
+                    active={page === orderPage}
+                    onClick={() => setOrderPage(page)}
+                  >
+                    {page}
+                  </Pagination.Item>
+                ),
+              )}
+              <Pagination.Next
+                disabled={orderPage === totalPages}
+                onClick={() =>
+                  setOrderPage((page) => Math.min(totalPages, page + 1))
+                }
+              />
+              <Pagination.Last
+                disabled={orderPage === totalPages}
+                onClick={() => setOrderPage(totalPages)}
+              />
+            </Pagination>
+          </div>
+        )}
+      </div>
+    );
+  };
 
+  const productPageCount = Math.max(
+    1,
+    Math.ceil(products.length / PRODUCTS_PER_PAGE),
+  );
+  const paginatedProducts = products.slice(
+    (productPage - 1) * PRODUCTS_PER_PAGE,
+    productPage * PRODUCTS_PER_PAGE,
+  );
   return (
     <div className="d_admin_panel">
       <div className="d_admin_breadcrumb container">
@@ -687,53 +866,89 @@ const AdminPanel = () => {
 
                 <Nav variant="pills" className="d_admin_sidebar_nav">
                   <Nav.Item>
-                    <Nav.Link eventKey="dashboard" className={`d_admin_sidebar_link ${activeTab === "dashboard" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="dashboard"
+                      className={`d_admin_sidebar_link ${activeTab === "dashboard" ? "active" : ""}`}
+                    >
                       <FaChartBar /> Dashboard
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="orders" className={`d_admin_sidebar_link ${activeTab === "orders" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="orders"
+                      className={`d_admin_sidebar_link ${activeTab === "orders" ? "active" : ""}`}
+                    >
                       <FaShoppingCart /> Orders
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="products" className={`d_admin_sidebar_link ${activeTab === "products" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="products"
+                      className={`d_admin_sidebar_link ${activeTab === "products" ? "active" : ""}`}
+                    >
                       <FaBox /> Products
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link as={Link} to="/admin/inventory" className="d_admin_sidebar_link">
+                    <Nav.Link
+                      eventKey="inventory"
+                      className={`d_admin_sidebar_link ${activeTab === "inventory" ? "active" : ""}`}
+                    >
                       <FaBox /> Stock Management
                     </Nav.Link>
                   </Nav.Item>
+                  {/* <Nav.Item>
+                    <Nav.Link as={Link} to="/admin/inventory" className="d_admin_sidebar_link">
+                      <FaBox /> Stock Management
+                    </Nav.Link>
+                  </Nav.Item> */}
                   <Nav.Item>
-                    <Nav.Link eventKey="categories" className={`d_admin_sidebar_link ${activeTab === "categories" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="categories"
+                      className={`d_admin_sidebar_link ${activeTab === "categories" ? "active" : ""}`}
+                    >
                       <FaList /> Categories
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="users" className={`d_admin_sidebar_link ${activeTab === "users" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="users"
+                      className={`d_admin_sidebar_link ${activeTab === "users" ? "active" : ""}`}
+                    >
                       <FaUsers /> Users
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="ads" className={`d_admin_sidebar_link ${activeTab === "ads" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="ads"
+                      className={`d_admin_sidebar_link ${activeTab === "ads" ? "active" : ""}`}
+                    >
                       <FaBullhorn /> Advertisements
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="coupons" className={`d_admin_sidebar_link ${activeTab === "coupons" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="coupons"
+                      className={`d_admin_sidebar_link ${activeTab === "coupons" ? "active" : ""}`}
+                    >
                       <FaTag /> Coupons
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
-                    <Nav.Link eventKey="settings" className={`d_admin_sidebar_link ${activeTab === "settings" ? "active" : ""}`}>
+                    <Nav.Link
+                      eventKey="settings"
+                      className={`d_admin_sidebar_link ${activeTab === "settings" ? "active" : ""}`}
+                    >
                       <FaCog /> Settings
                     </Nav.Link>
                   </Nav.Item>
                   <div className="d_admin_sidebar_divider"></div>
                   <Nav.Item>
-                    <button type="button" className="d_admin_sidebar_link d_admin_sidebar_logout" onClick={handleLogout}>
+                    <button
+                      type="button"
+                      className="d_admin_sidebar_link d_admin_sidebar_logout"
+                      onClick={handleLogout}
+                    >
                       <FaSignOutAlt /> Logout
                     </button>
                   </Nav.Item>
@@ -760,8 +975,14 @@ const AdminPanel = () => {
                                 <div className="d_stat_info">
                                   <h3>{stat.value}</h3>
                                   <p>{stat.title}</p>
-                                  <span className={`d_stat_change ${stat.trend}`}>
-                                    {stat.trend === "up" ? <FaAngleUp /> : <FaAngleDown />}
+                                  <span
+                                    className={`d_stat_change ${stat.trend}`}
+                                  >
+                                    {stat.trend === "up" ? (
+                                      <FaAngleUp />
+                                    ) : (
+                                      <FaAngleDown />
+                                    )}
                                     {stat.change}
                                   </span>
                                 </div>
@@ -774,15 +995,28 @@ const AdminPanel = () => {
 
                     <div className="d_myaccount_card mt-4">
                       <div className="d_myaccount_card_header">
-                        <h4>Recent Orders</h4>
-                        <button type="button" className="d_btn_outline" onClick={() => setActiveTab("orders")}>
+                        <h4>All Orders</h4>
+                        <button
+                          type="button"
+                          className="d_btn_outline"
+                          onClick={() => setActiveTab("orders")}
+                        >
                           View All
                         </button>
                       </div>
-                      <div className="d_myaccount_card_body">{renderOrdersTable(orders.slice(0, 5))}</div>
+                      <div className="d_myaccount_card_body">
+                        {renderOrdersTable(orders, true)}
+                      </div>
                     </div>
                   </Tab.Pane>
+                  <Tab.Pane eventKey="inventory">
+                    {loadingStats ? (
+                      <div className="text-center py-5">Loading stats…</div>
+                    ) : (
+                      <InventoryManagement></InventoryManagement>
+                    )}
 
+                  </Tab.Pane>
                   {/* Orders */}
                   <Tab.Pane eventKey="orders">
                     <div className="d_myaccount_card">
@@ -807,7 +1041,9 @@ const AdminPanel = () => {
                           </select>
                         </div>
                       </div>
-                      <div className="d_myaccount_card_body">{renderOrdersTable(orders)}</div>
+                      <div className="d_myaccount_card_body">
+                        {renderOrdersTable(orders, true)}
+                      </div>
                     </div>
                   </Tab.Pane>
 
@@ -816,7 +1052,10 @@ const AdminPanel = () => {
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Products</h4>
-                        <button className="d_btn_primary" onClick={() => openAdd("product")}>
+                        <button
+                          className="d_btn_primary"
+                          onClick={() => openAdd("product")}
+                        >
                           <FaPlus /> Add Product
                         </button>
                       </div>
@@ -848,32 +1087,70 @@ const AdminPanel = () => {
                                   </td>
                                 </tr>
                               ) : (
-                                products.map((product) => (
+                                paginatedProducts.map((product) => (
                                   <tr key={product.id}>
                                     <td>
-                                      <img src={product.image} alt={product.name} className="d_admin_product_img" />
+                                      <img
+                                        src={product.image}
+                                        alt={product.name}
+                                        className="d_admin_product_img"
+                                      />
                                     </td>
                                     <td>{product.name}</td>
                                     <td>{product.category}</td>
-                                    <td>₹{(product.salePrice || product.price || 0).toLocaleString("en-IN")}</td>
+                                    <td>
+                                      ₹
+                                      {(
+                                        product.salePrice ||
+                                        product.price ||
+                                        0
+                                      ).toLocaleString("en-IN")}
+                                    </td>
                                     <td>{product.stock}</td>
                                     <td>
-                                      <Badge className={(product.status || "active") === "active" ? "d_status_active" : "d_status_inactive"}>
-                                        {formatStatus(product.status || "active")}
+                                      <Badge
+                                        className={
+                                          (product.status || "active") ===
+                                          "active"
+                                            ? "d_status_active"
+                                            : "d_status_inactive"
+                                        }
+                                      >
+                                        {formatStatus(
+                                          product.status || "active",
+                                        )}
                                       </Badge>
                                     </td>
                                     <td>
                                       <div className="d_table_actions">
-                                        <button className="d_table_action_btn" title="View" onClick={() => openModal("product", "view", product)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="View"
+                                          onClick={() =>
+                                            openModal(
+                                              "product",
+                                              "view",
+                                              product,
+                                            )
+                                          }
+                                        >
                                           <FaEye />
                                         </button>
-                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("product", product)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="Edit"
+                                          onClick={() =>
+                                            openEdit("product", product)
+                                          }
+                                        >
                                           <FaEdit />
                                         </button>
                                         <button
                                           className="d_table_action_btn d_table_action_btn_delete"
                                           title="Delete"
-                                          onClick={() => handleDelete("product", product.id)}
+                                          onClick={() =>
+                                            handleDelete("product", product.id)
+                                          }
                                         >
                                           <FaTrash />
                                         </button>
@@ -884,6 +1161,59 @@ const AdminPanel = () => {
                               )}
                             </tbody>
                           </Table>
+                          {products.length > PRODUCTS_PER_PAGE && (
+                            <div className="d_admin_pagination_wrapper">
+                              <small className="text-muted">
+                                Showing{" "}
+                                {(productPage - 1) * PRODUCTS_PER_PAGE + 1}-
+                                {Math.min(
+                                  productPage * PRODUCTS_PER_PAGE,
+                                  products.length,
+                                )}{" "}
+                                of {products.length}
+                              </small>
+                              <Pagination className="d_admin_pagination mb-0">
+                                <Pagination.First
+                                  disabled={productPage === 1}
+                                  onClick={() => setProductPage(1)}
+                                />
+                                <Pagination.Prev
+                                  disabled={productPage === 1}
+                                  onClick={() =>
+                                    setProductPage((page) =>
+                                      Math.max(1, page - 1),
+                                    )
+                                  }
+                                />
+                                {Array.from(
+                                  { length: productPageCount },
+                                  (_, index) => index + 1,
+                                ).map((page) => (
+                                  <Pagination.Item
+                                    key={page}
+                                    active={page === productPage}
+                                    onClick={() => setProductPage(page)}
+                                  >
+                                    {page}
+                                  </Pagination.Item>
+                                ))}
+                                <Pagination.Next
+                                  disabled={productPage === productPageCount}
+                                  onClick={() =>
+                                    setProductPage((page) =>
+                                      Math.min(productPageCount, page + 1),
+                                    )
+                                  }
+                                />
+                                <Pagination.Last
+                                  disabled={productPage === productPageCount}
+                                  onClick={() =>
+                                    setProductPage(productPageCount)
+                                  }
+                                />
+                              </Pagination>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -894,7 +1224,10 @@ const AdminPanel = () => {
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Categories</h4>
-                        <button className="d_btn_primary" onClick={() => openCategoryModal("add")}>
+                        <button
+                          className="d_btn_primary"
+                          onClick={() => openCategoryModal("add")}
+                        >
                           <FaPlus /> Add Category
                         </button>
                       </div>
@@ -922,25 +1255,46 @@ const AdminPanel = () => {
                                 categories.map((cat) => (
                                   <tr key={cat.id || cat._id}>
                                     <td>
-                                      <img src={cat.image} alt={cat.name} className="d_admin_product_img" />
+                                      <img
+                                        src={cat.image}
+                                        alt={cat.name}
+                                        className="d_admin_product_img"
+                                      />
                                     </td>
                                     <td>{cat.name}</td>
                                     <td>{cat.slug}</td>
                                     <td>{cat.type}</td>
                                     <td>
-                                      <Badge className={(cat.status || "active") === "active" ? "d_status_active" : "d_status_inactive"}>
+                                      <Badge
+                                        className={
+                                          (cat.status || "active") === "active"
+                                            ? "d_status_active"
+                                            : "d_status_inactive"
+                                        }
+                                      >
                                         {formatStatus(cat.status || "active")}
                                       </Badge>
                                     </td>
                                     <td>
                                       <div className="d_table_actions">
-                                        <button className="d_table_action_btn" title="Edit" onClick={() => openCategoryModal("edit", cat)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="Edit"
+                                          onClick={() =>
+                                            openCategoryModal("edit", cat)
+                                          }
+                                        >
                                           <FaEdit />
                                         </button>
                                         <button
                                           className="d_table_action_btn d_table_action_btn_delete"
                                           title="Delete"
-                                          onClick={() => handleDelete("category", cat._id || cat.id)}
+                                          onClick={() =>
+                                            handleDelete(
+                                              "category",
+                                              cat._id || cat.id,
+                                            )
+                                          }
                                         >
                                           <FaTrash />
                                         </button>
@@ -961,7 +1315,10 @@ const AdminPanel = () => {
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Users</h4>
-                        <button className="d_btn_primary" onClick={() => openAdd("user")}>
+                        <button
+                          className="d_btn_primary"
+                          onClick={() => openAdd("user")}
+                        >
                           <FaPlus /> Add User
                         </button>
                       </div>
@@ -999,22 +1356,40 @@ const AdminPanel = () => {
                                     <td>{user.role}</td>
                                     <td>{user.joined}</td>
                                     <td>
-                                      <Badge className={user.status === "Active" ? "d_status_active" : "d_status_inactive"}>
+                                      <Badge
+                                        className={
+                                          user.status === "Active"
+                                            ? "d_status_active"
+                                            : "d_status_inactive"
+                                        }
+                                      >
                                         {user.status}
                                       </Badge>
                                     </td>
                                     <td>
                                       <div className="d_table_actions">
-                                        <button className="d_table_action_btn" title="View" onClick={() => openModal("user", "view", user)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="View"
+                                          onClick={() =>
+                                            openModal("user", "view", user)
+                                          }
+                                        >
                                           <FaEye />
                                         </button>
-                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("user", user)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="Edit"
+                                          onClick={() => openEdit("user", user)}
+                                        >
                                           <FaEdit />
                                         </button>
                                         <button
                                           className="d_table_action_btn d_table_action_btn_delete"
                                           title="Delete"
-                                          onClick={() => handleDelete("user", user.id)}
+                                          onClick={() =>
+                                            handleDelete("user", user.id)
+                                          }
                                         >
                                           <FaTrash />
                                         </button>
@@ -1035,7 +1410,10 @@ const AdminPanel = () => {
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Advertisements</h4>
-                        <button className="d_btn_primary" onClick={() => openAdd("ad")}>
+                        <button
+                          className="d_btn_primary"
+                          onClick={() => openAdd("ad")}
+                        >
                           <FaPlus /> Add Ad
                         </button>
                       </div>
@@ -1071,7 +1449,11 @@ const AdminPanel = () => {
                                   <tr key={ad._id}>
                                     <td>
                                       {ad.image ? (
-                                        <img src={ad.image} alt={ad.title} className="d_admin_product_img" />
+                                        <img
+                                          src={ad.image}
+                                          alt={ad.title}
+                                          className="d_admin_product_img"
+                                        />
                                       ) : (
                                         "—"
                                       )}
@@ -1081,19 +1463,31 @@ const AdminPanel = () => {
                                     <td>{ad.type}</td>
                                     <td>{ad.priority}</td>
                                     <td>
-                                      <Badge className={ad.status === "active" ? "d_status_active" : "d_status_inactive"}>
+                                      <Badge
+                                        className={
+                                          ad.status === "active"
+                                            ? "d_status_active"
+                                            : "d_status_inactive"
+                                        }
+                                      >
                                         {formatStatus(ad.status)}
                                       </Badge>
                                     </td>
                                     <td>
                                       <div className="d_table_actions">
-                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("ad", ad)}>
+                                        <button
+                                          className="d_table_action_btn"
+                                          title="Edit"
+                                          onClick={() => openEdit("ad", ad)}
+                                        >
                                           <FaEdit />
                                         </button>
                                         <button
                                           className="d_table_action_btn d_table_action_btn_delete"
                                           title="Delete"
-                                          onClick={() => handleDelete("ad", ad._id)}
+                                          onClick={() =>
+                                            handleDelete("ad", ad._id)
+                                          }
                                         >
                                           <FaTrash />
                                         </button>
@@ -1114,7 +1508,10 @@ const AdminPanel = () => {
                     <div className="d_myaccount_card">
                       <div className="d_myaccount_card_header">
                         <h4>Coupons</h4>
-                        <button className="d_btn_primary" onClick={() => openAdd("coupon")}>
+                        <button
+                          className="d_btn_primary"
+                          onClick={() => openAdd("coupon")}
+                        >
                           <FaPlus /> Add Coupon
                         </button>
                       </div>
@@ -1135,53 +1532,144 @@ const AdminPanel = () => {
                             </thead>
                             <tbody>
                               {loadingCoupons ? (
-                                <tr><td colSpan={8} className="text-center">Loading coupons…</td></tr>
+                                <tr>
+                                  <td colSpan={8} className="text-center">
+                                    Loading coupons…
+                                  </td>
+                                </tr>
                               ) : coupons.length === 0 ? (
-                                <tr><td colSpan={8} className="text-center">No coupons found.</td></tr>
+                                <tr>
+                                  <td colSpan={8} className="text-center">
+                                    No coupons found.
+                                  </td>
+                                </tr>
                               ) : (
-                                coupons.map((c) => (
-                                  <tr key={c._id}>
-                                    <td><strong style={{ letterSpacing: "0.05em" }}>{c.code}</strong></td>
-                                    <td>{c.discountType === "percentage" ? "%" : "₹ Flat"}</td>
-                                    <td>
-                                      {c.discountType === "percentage"
-                                        ? `${c.discountValue}%${c.maxDiscountAmount ? ` (max ₹${c.maxDiscountAmount})` : ""}`
-                                        : `₹${c.discountValue}`}
-                                    </td>
-                                    <td>{c.minOrderAmount > 0 ? `₹${c.minOrderAmount}` : "—"}</td>
-                                    <td>{c.usedCount} / {c.usageLimit ?? "∞"}</td>
-                                    <td>{c.validUntil ? new Date(c.validUntil).toLocaleDateString("en-IN") : "No expiry"}</td>
-                                    <td>
-                                      <Badge className={c.isActive ? "d_status_active" : "d_status_inactive"}>
-                                        {c.isActive ? "Active" : "Inactive"}
-                                      </Badge>
-                                    </td>
-                                    <td>
-                                      <div className="d_table_actions">
-                                        <button
-                                          className="d_table_action_btn"
-                                          title={c.isActive ? "Deactivate" : "Activate"}
-                                          onClick={async () => {
-                                            try { await couponAPI.toggle(c._id); await loadCoupons(); }
-                                            catch (err) { alert("Failed: " + err.message); }
-                                          }}
-                                        >
-                                          {c.isActive ? <FaToggleOn style={{ color: "#28a745" }} /> : <FaToggleOff style={{ color: "#aaa" }} />}
-                                        </button>
-                                        <button className="d_table_action_btn" title="Edit" onClick={() => openEdit("coupon", c)}>
-                                          <FaEdit />
-                                        </button>
-                                        <button
-                                          className="d_table_action_btn d_table_action_btn_delete"
-                                          title="Delete"
-                                          onClick={() => handleDelete("coupon", c._id)}
-                                        >
-                                          <FaTrash />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))
+                                coupons.map((c) =>
+                                  (() => {
+                                    const isExpired =
+                                      c.validUntil &&
+                                      new Date(c.validUntil).getTime() <=
+                                        currentTime;
+                                    const usageCount =
+                                      c.usedCount ?? c.usedBy?.length ?? 0;
+                                    const isUsageLimitReached =
+                                      c.usageLimit !== null &&
+                                      c.usageLimit !== undefined &&
+                                      usageCount >= c.usageLimit;
+                                    return (
+                                      <tr key={c._id}>
+                                        <td>
+                                          <strong
+                                            style={{ letterSpacing: "0.05em" }}
+                                          >
+                                            {c.code}
+                                          </strong>
+                                        </td>
+                                        <td>
+                                          {c.discountType === "percentage"
+                                            ? "%"
+                                            : "₹ Flat"}
+                                        </td>
+                                        <td>
+                                          {c.discountType === "percentage"
+                                            ? `${c.discountValue}%${c.maxDiscountAmount ? ` (max ₹${c.maxDiscountAmount})` : ""}`
+                                            : `₹${c.discountValue}`}
+                                        </td>
+                                        <td>
+                                          {c.minOrderAmount > 0
+                                            ? `₹${c.minOrderAmount}`
+                                            : "—"}
+                                        </td>
+                                        <td>
+                                          {usageCount} / {c.usageLimit ?? "∞"}
+                                        </td>
+                                        <td>
+                                          {c.validUntil
+                                            ? new Date(
+                                                c.validUntil,
+                                              ).toLocaleDateString("en-IN")
+                                            : "No expiry"}
+                                        </td>
+                                        <td>
+                                          <Badge
+                                            className={
+                                              c.isActive &&
+                                              !isExpired &&
+                                              !isUsageLimitReached
+                                                ? "d_status_active"
+                                                : "d_status_inactive"
+                                            }
+                                          >
+                                            {isExpired
+                                              ? "Expired"
+                                              : isUsageLimitReached
+                                                ? "Limit reached"
+                                                : c.isActive
+                                                  ? "Active"
+                                                  : "Inactive"}
+                                          </Badge>
+                                        </td>
+                                        <td>
+                                          <div className="d_table_actions">
+                                            <button
+                                              className="d_table_action_btn"
+                                              title={
+                                                isExpired
+                                                  ? "Expired coupons cannot be activated"
+                                                  : isUsageLimitReached
+                                                    ? "Usage limit reached"
+                                                    : c.isActive
+                                                      ? "Deactivate"
+                                                      : "Activate"
+                                              }
+                                              disabled={
+                                                isExpired || isUsageLimitReached
+                                              }
+                                              onClick={async () => {
+                                                try {
+                                                  await couponAPI.toggle(c._id);
+                                                  await loadCoupons();
+                                                } catch (err) {
+                                                  alert(
+                                                    "Failed: " + err.message,
+                                                  );
+                                                }
+                                              }}
+                                            >
+                                              {c.isActive ? (
+                                                <FaToggleOn
+                                                  style={{ color: "#28a745" }}
+                                                />
+                                              ) : (
+                                                <FaToggleOff
+                                                  style={{ color: "#aaa" }}
+                                                />
+                                              )}
+                                            </button>
+                                            <button
+                                              className="d_table_action_btn"
+                                              title="Edit"
+                                              onClick={() =>
+                                                openEdit("coupon", c)
+                                              }
+                                            >
+                                              <FaEdit />
+                                            </button>
+                                            <button
+                                              className="d_table_action_btn d_table_action_btn_delete"
+                                              title="Delete"
+                                              onClick={() =>
+                                                handleDelete("coupon", c._id)
+                                              }
+                                            >
+                                              <FaTrash />
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })(),
+                                )
                               )}
                             </tbody>
                           </Table>
@@ -1206,7 +1694,12 @@ const AdminPanel = () => {
                                 <input
                                   type="text"
                                   value={settings.storeName}
-                                  onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+                                  onChange={(e) =>
+                                    setSettings({
+                                      ...settings,
+                                      storeName: e.target.value,
+                                    })
+                                  }
                                 />
                               </div>
                               <div className="d_myaccount_field">
@@ -1214,7 +1707,12 @@ const AdminPanel = () => {
                                 <input
                                   type="email"
                                   value={settings.storeEmail}
-                                  onChange={(e) => setSettings({ ...settings, storeEmail: e.target.value })}
+                                  onChange={(e) =>
+                                    setSettings({
+                                      ...settings,
+                                      storeEmail: e.target.value,
+                                    })
+                                  }
                                 />
                               </div>
                               <div className="d_myaccount_field">
@@ -1222,7 +1720,12 @@ const AdminPanel = () => {
                                 <input
                                   type="tel"
                                   value={settings.storePhone}
-                                  onChange={(e) => setSettings({ ...settings, storePhone: e.target.value })}
+                                  onChange={(e) =>
+                                    setSettings({
+                                      ...settings,
+                                      storePhone: e.target.value,
+                                    })
+                                  }
                                 />
                               </div>
                             </div>
@@ -1235,9 +1738,19 @@ const AdminPanel = () => {
                                 <button
                                   type="button"
                                   className={`d_toggle_btn ${settings.emailNotifications ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() => setSettings({ ...settings, emailNotifications: !settings.emailNotifications })}
+                                  onClick={() =>
+                                    setSettings({
+                                      ...settings,
+                                      emailNotifications:
+                                        !settings.emailNotifications,
+                                    })
+                                  }
                                 >
-                                  {settings.emailNotifications ? <FaToggleOn /> : <FaToggleOff />}
+                                  {settings.emailNotifications ? (
+                                    <FaToggleOn />
+                                  ) : (
+                                    <FaToggleOff />
+                                  )}
                                 </button>
                               </div>
                               <div className="d_setting_toggle">
@@ -1245,9 +1758,19 @@ const AdminPanel = () => {
                                 <button
                                   type="button"
                                   className={`d_toggle_btn ${settings.smsNotifications ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() => setSettings({ ...settings, smsNotifications: !settings.smsNotifications })}
+                                  onClick={() =>
+                                    setSettings({
+                                      ...settings,
+                                      smsNotifications:
+                                        !settings.smsNotifications,
+                                    })
+                                  }
                                 >
-                                  {settings.smsNotifications ? <FaToggleOn /> : <FaToggleOff />}
+                                  {settings.smsNotifications ? (
+                                    <FaToggleOn />
+                                  ) : (
+                                    <FaToggleOff />
+                                  )}
                                 </button>
                               </div>
                               <div className="d_setting_toggle">
@@ -1255,16 +1778,29 @@ const AdminPanel = () => {
                                 <button
                                   type="button"
                                   className={`d_toggle_btn ${settings.orderAlerts ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() => setSettings({ ...settings, orderAlerts: !settings.orderAlerts })}
+                                  onClick={() =>
+                                    setSettings({
+                                      ...settings,
+                                      orderAlerts: !settings.orderAlerts,
+                                    })
+                                  }
                                 >
-                                  {settings.orderAlerts ? <FaToggleOn /> : <FaToggleOff />}
+                                  {settings.orderAlerts ? (
+                                    <FaToggleOn />
+                                  ) : (
+                                    <FaToggleOff />
+                                  )}
                                 </button>
                               </div>
                             </div>
                           </Col>
                         </Row>
                         <div className="mt-4">
-                          <button className="d_btn_primary" onClick={handleSaveSettings} disabled={savingSettings}>
+                          <button
+                            className="d_btn_primary"
+                            onClick={handleSaveSettings}
+                            disabled={savingSettings}
+                          >
                             {savingSettings ? "Saving…" : "Save Changes"}
                           </button>
                         </div>
@@ -1279,7 +1815,14 @@ const AdminPanel = () => {
       </div>
 
       {/* Modal */}
-      <Modal show={modal.type !== null} onHide={closeModal} centered className="d_admin_modal" backdrop="static" size="lg">
+      <Modal
+        show={modal.type !== null}
+        onHide={closeModal}
+        centered
+        className="d_admin_modal"
+        backdrop="static"
+        size="lg"
+      >
         <Modal.Header className="d_admin_modal_header">
           <Modal.Title className="d_admin_modal_title">
             {modal.mode === "add" &&
@@ -1311,7 +1854,11 @@ const AdminPanel = () => {
                   ? "User Details"
                   : "Order Details")}
           </Modal.Title>
-          <button className="d_admin_modal_close" onClick={closeModal} aria-label="Close">
+          <button
+            className="d_admin_modal_close"
+            onClick={closeModal}
+            aria-label="Close"
+          >
             <FaTimes />
           </button>
         </Modal.Header>
@@ -1321,7 +1868,11 @@ const AdminPanel = () => {
           {modal.type === "product" &&
             (isView ? (
               <div className="d_admin_view_grid">
-                <img src={modal.data?.image} alt={modal.data?.name} className="d_admin_view_img" />
+                <img
+                  src={modal.data?.image}
+                  alt={modal.data?.name}
+                  className="d_admin_view_img"
+                />
                 <div className="d_admin_view_row">
                   <span>Name</span>
                   <strong>{modal.data?.name}</strong>
@@ -1332,7 +1883,9 @@ const AdminPanel = () => {
                 </div>
                 <div className="d_admin_view_row">
                   <span>Price</span>
-                  <strong>₹{Number(modal.data?.price || 0).toLocaleString("en-IN")}</strong>
+                  <strong>
+                    ₹{Number(modal.data?.price || 0).toLocaleString("en-IN")}
+                  </strong>
                 </div>
                 <div className="d_admin_view_row">
                   <span>Stock</span>
@@ -1353,12 +1906,23 @@ const AdminPanel = () => {
               <Form className="d_admin_form">
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Product Name</Form.Label>
-                  <Form.Control name="name" value={form.name || ""} onChange={handleFormChange} placeholder="Enter product name" />
+                  <Form.Control
+                    name="name"
+                    value={form.name || ""}
+                    onChange={handleFormChange}
+                    placeholder="Enter product name"
+                  />
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Category</Form.Label>
-                  <Form.Select name="category" value={form.category || ""} onChange={handleFormChange}>
-                    {categories.length === 0 && <option value="">No categories</option>}
+                  <Form.Select
+                    name="category"
+                    value={form.category || ""}
+                    onChange={handleFormChange}
+                  >
+                    {categories.length === 0 && (
+                      <option value="">No categories</option>
+                    )}
                     {categories.map((c) => (
                       <option key={c.id || c._id} value={c._id}>
                         {c.name}
@@ -1368,19 +1932,35 @@ const AdminPanel = () => {
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Description</Form.Label>
-                  <Form.Control as="textarea" rows={2} name="description" value={form.description || ""} onChange={handleFormChange} />
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    name="description"
+                    value={form.description || ""}
+                    onChange={handleFormChange}
+                  />
                 </Form.Group>
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Price (₹)</Form.Label>
-                      <Form.Control type="number" name="price" value={form.price || ""} onChange={handleFormChange} />
+                      <Form.Control
+                        type="number"
+                        name="price"
+                        value={form.price || ""}
+                        onChange={handleFormChange}
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Discount Price (₹)</Form.Label>
-                      <Form.Control type="number" name="discountPrice" value={form.discountPrice || ""} onChange={handleFormChange} />
+                      <Form.Control
+                        type="number"
+                        name="discountPrice"
+                        value={form.discountPrice || ""}
+                        onChange={handleFormChange}
+                      />
                     </Form.Group>
                   </Col>
                 </Row>
@@ -1388,14 +1968,27 @@ const AdminPanel = () => {
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Stock</Form.Label>
-                      <Form.Control type="number" name="stock" value={form.stock || ""} onChange={handleFormChange} />
+                      <Form.Control
+                        type="number"
+                        name="stock"
+                        value={form.stock || ""}
+                        onChange={handleFormChange}
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Low Stock Alert At</Form.Label>
-                      <Form.Control type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold ?? 5} onChange={handleFormChange} />
-                      <Form.Text className="text-muted">Show alert when stock reaches this quantity.</Form.Text>
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        name="lowStockThreshold"
+                        value={form.lowStockThreshold ?? 5}
+                        onChange={handleFormChange}
+                      />
+                      <Form.Text className="text-muted">
+                        Show alert when stock reaches this quantity.
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -1403,7 +1996,11 @@ const AdminPanel = () => {
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Type</Form.Label>
-                      <Form.Select name="type" value={form.type || "clothing"} onChange={handleFormChange}>
+                      <Form.Select
+                        name="type"
+                        value={form.type || "clothing"}
+                        onChange={handleFormChange}
+                      >
                         <option value="clothing">Clothing</option>
                         <option value="appliance">Appliance</option>
                       </Form.Select>
@@ -1413,7 +2010,11 @@ const AdminPanel = () => {
                 {form.type === "clothing" && (
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Gender</Form.Label>
-                    <Form.Select name="gender" value={form.gender || ""} onChange={handleFormChange}>
+                    <Form.Select
+                      name="gender"
+                      value={form.gender || ""}
+                      onChange={handleFormChange}
+                    >
                       <option value="">Select Gender</option>
                       <option value="male">Male</option>
                       <option value="female">Female</option>
@@ -1422,40 +2023,81 @@ const AdminPanel = () => {
                 )}
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Brand</Form.Label>
-                  <Form.Control name="brand" value={form.brand || ""} onChange={handleFormChange} />
+                  <Form.Control
+                    name="brand"
+                    value={form.brand || ""}
+                    onChange={handleFormChange}
+                  />
                 </Form.Group>
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Colors (comma separated)</Form.Label>
-                      <Form.Control name="colors" value={form.colors || ""} onChange={handleFormChange} placeholder="Red, Blue, Black" />
+                      <Form.Control
+                        name="colors"
+                        value={form.colors || ""}
+                        onChange={handleFormChange}
+                        placeholder="Red, Blue, Black"
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="d_admin_form_group">
                       <Form.Label>Sizes (comma separated)</Form.Label>
-                      <Form.Control name="sizes" value={form.sizes || ""} onChange={handleFormChange} placeholder="S, M, L, XL" />
+                      <Form.Control
+                        name="sizes"
+                        value={form.sizes || ""}
+                        onChange={handleFormChange}
+                        placeholder="S, M, L, XL"
+                      />
                     </Form.Group>
                   </Col>
                 </Row>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Image URL</Form.Label>
-                  <Form.Control name="image" value={form.image || ""} onChange={handleFormChange} placeholder="https://..." />
+                  <Form.Control
+                    name="image"
+                    value={form.image || ""}
+                    onChange={handleFormChange}
+                    placeholder="https://..."
+                  />
                 </Form.Group>
                 <Row className="g-3 mb-2">
                   <Col md={4}>
-                    <Form.Check type="checkbox" name="featured" label="Featured" checked={!!form.featured} onChange={handleFormChange} />
+                    <Form.Check
+                      type="checkbox"
+                      name="featured"
+                      label="Featured"
+                      checked={!!form.featured}
+                      onChange={handleFormChange}
+                    />
                   </Col>
                   <Col md={4}>
-                    <Form.Check type="checkbox" name="bestSeller" label="Best Seller" checked={!!form.bestSeller} onChange={handleFormChange} />
+                    <Form.Check
+                      type="checkbox"
+                      name="bestSeller"
+                      label="Best Seller"
+                      checked={!!form.bestSeller}
+                      onChange={handleFormChange}
+                    />
                   </Col>
                   <Col md={4}>
-                    <Form.Check type="checkbox" name="flashSale" label="Flash Sale" checked={!!form.flashSale} onChange={handleFormChange} />
+                    <Form.Check
+                      type="checkbox"
+                      name="flashSale"
+                      label="Flash Sale"
+                      checked={!!form.flashSale}
+                      onChange={handleFormChange}
+                    />
                   </Col>
                 </Row>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Status</Form.Label>
-                  <Form.Select name="status" value={form.status || "active"} onChange={handleFormChange}>
+                  <Form.Select
+                    name="status"
+                    value={form.status || "active"}
+                    onChange={handleFormChange}
+                  >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </Form.Select>
@@ -1468,17 +2110,29 @@ const AdminPanel = () => {
             <Form className="d_admin_form">
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Category Name</Form.Label>
-                <Form.Control name="name" value={form.name || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="name"
+                  value={form.name || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Slug</Form.Label>
-                <Form.Control name="slug" value={form.slug || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="slug"
+                  value={form.slug || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Row className="g-3">
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Type</Form.Label>
-                    <Form.Select name="type" value={form.type || "clothing"} onChange={handleFormChange}>
+                    <Form.Select
+                      name="type"
+                      value={form.type || "clothing"}
+                      onChange={handleFormChange}
+                    >
                       <option value="clothing">Clothing</option>
                       <option value="appliance">Appliance</option>
                     </Form.Select>
@@ -1487,7 +2141,11 @@ const AdminPanel = () => {
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Status</Form.Label>
-                    <Form.Select name="status" value={form.status || "active"} onChange={handleFormChange}>
+                    <Form.Select
+                      name="status"
+                      value={form.status || "active"}
+                      onChange={handleFormChange}
+                    >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </Form.Select>
@@ -1496,11 +2154,21 @@ const AdminPanel = () => {
               </Row>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Image URL</Form.Label>
-                <Form.Control name="image" value={form.image || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="image"
+                  value={form.image || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Description</Form.Label>
-                <Form.Control as="textarea" rows={3} name="description" value={form.description || ""} onChange={handleFormChange} />
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  name="description"
+                  value={form.description || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
             </Form>
           )}
@@ -1534,32 +2202,58 @@ const AdminPanel = () => {
               <Form className="d_admin_form">
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Full Name</Form.Label>
-                  <Form.Control name="name" value={form.name || ""} onChange={handleFormChange} />
+                  <Form.Control
+                    name="name"
+                    value={form.name || ""}
+                    onChange={handleFormChange}
+                  />
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Email</Form.Label>
-                  <Form.Control type="email" name="email" value={form.email || ""} onChange={handleFormChange} />
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    value={form.email || ""}
+                    onChange={handleFormChange}
+                  />
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Phone</Form.Label>
-                  <Form.Control name="phone" value={form.phone || ""} onChange={handleFormChange} />
+                  <Form.Control
+                    name="phone"
+                    value={form.phone || ""}
+                    onChange={handleFormChange}
+                  />
                 </Form.Group>
                 {modal.mode === "add" && (
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Password</Form.Label>
-                    <Form.Control type="password" name="password" value={form.password || ""} onChange={handleFormChange} />
+                    <Form.Control
+                      type="password"
+                      name="password"
+                      value={form.password || ""}
+                      onChange={handleFormChange}
+                    />
                   </Form.Group>
                 )}
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Role</Form.Label>
-                  <Form.Select name="role" value={form.role || "Customer"} onChange={handleFormChange}>
+                  <Form.Select
+                    name="role"
+                    value={form.role || "Customer"}
+                    onChange={handleFormChange}
+                  >
                     <option>Customer</option>
                     <option>Admin</option>
                   </Form.Select>
                 </Form.Group>
                 <Form.Group className="d_admin_form_group">
                   <Form.Label>Status</Form.Label>
-                  <Form.Select name="status" value={form.status || "Active"} onChange={handleFormChange}>
+                  <Form.Select
+                    name="status"
+                    value={form.status || "Active"}
+                    onChange={handleFormChange}
+                  >
                     <option>Active</option>
                     <option>Inactive</option>
                   </Form.Select>
@@ -1572,25 +2266,46 @@ const AdminPanel = () => {
             <Form className="d_admin_form">
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Title</Form.Label>
-                <Form.Control name="title" value={form.title || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="title"
+                  value={form.title || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Subtitle</Form.Label>
-                <Form.Control name="subtitle" value={form.subtitle || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="subtitle"
+                  value={form.subtitle || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Image URL</Form.Label>
-                <Form.Control name="image" value={form.image || ""} onChange={handleFormChange} />
+                <Form.Control
+                  name="image"
+                  value={form.image || ""}
+                  onChange={handleFormChange}
+                />
               </Form.Group>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Link</Form.Label>
-                <Form.Control name="link" value={form.link || ""} onChange={handleFormChange} placeholder="/clothing" />
+                <Form.Control
+                  name="link"
+                  value={form.link || ""}
+                  onChange={handleFormChange}
+                  placeholder="/clothing"
+                />
               </Form.Group>
               <Row className="g-3">
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Position</Form.Label>
-                    <Form.Select name="position" value={form.position || "hero"} onChange={handleFormChange}>
+                    <Form.Select
+                      name="position"
+                      value={form.position || "hero"}
+                      onChange={handleFormChange}
+                    >
                       <option value="hero">Hero</option>
                       <option value="top-banner">Top Banner</option>
                       <option value="in-feed">In Feed</option>
@@ -1603,7 +2318,11 @@ const AdminPanel = () => {
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Type</Form.Label>
-                    <Form.Select name="type" value={form.type || "general"} onChange={handleFormChange}>
+                    <Form.Select
+                      name="type"
+                      value={form.type || "general"}
+                      onChange={handleFormChange}
+                    >
                       <option value="general">General</option>
                       <option value="clothing">Clothing</option>
                       <option value="appliance">Appliance</option>
@@ -1613,13 +2332,22 @@ const AdminPanel = () => {
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Priority</Form.Label>
-                    <Form.Control type="number" name="priority" value={form.priority || 0} onChange={handleFormChange} />
+                    <Form.Control
+                      type="number"
+                      name="priority"
+                      value={form.priority || 0}
+                      onChange={handleFormChange}
+                    />
                   </Form.Group>
                 </Col>
               </Row>
               <Form.Group className="d_admin_form_group">
                 <Form.Label>Status</Form.Label>
-                <Form.Select name="status" value={form.status || "active"} onChange={handleFormChange}>
+                <Form.Select
+                  name="status"
+                  value={form.status || "active"}
+                  onChange={handleFormChange}
+                >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </Form.Select>
@@ -1633,20 +2361,31 @@ const AdminPanel = () => {
               <Row className="g-3">
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
-                    <Form.Label>Coupon Code <span className="text-danger">*</span></Form.Label>
+                    <Form.Label>
+                      Coupon Code <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       name="code"
                       value={form.code || ""}
                       onChange={handleFormChange}
                       placeholder="e.g. SAVE20"
-                      style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}
+                      style={{
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        fontWeight: 600,
+                      }}
                     />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Description</Form.Label>
-                    <Form.Control name="description" value={form.description || ""} onChange={handleFormChange} placeholder="e.g. 20% off on all orders" />
+                    <Form.Control
+                      name="description"
+                      value={form.description || ""}
+                      onChange={handleFormChange}
+                      placeholder="e.g. 20% off on all orders"
+                    />
                   </Form.Group>
                 </Col>
               </Row>
@@ -1654,8 +2393,14 @@ const AdminPanel = () => {
               <Row className="g-3">
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
-                    <Form.Label>Discount Type <span className="text-danger">*</span></Form.Label>
-                    <Form.Select name="discountType" value={form.discountType || "percentage"} onChange={handleFormChange}>
+                    <Form.Label>
+                      Discount Type <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      name="discountType"
+                      value={form.discountType || "percentage"}
+                      onChange={handleFormChange}
+                    >
                       <option value="percentage">Percentage (%)</option>
                       <option value="flat">Flat Amount (₹)</option>
                     </Form.Select>
@@ -1665,8 +2410,13 @@ const AdminPanel = () => {
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>
                       Discount Value <span className="text-danger">*</span>
-                      <span className="text-muted ms-1" style={{ fontSize: "0.78rem" }}>
-                        {form.discountType === "flat" ? "(₹ amount)" : "(% percentage)"}
+                      <span
+                        className="text-muted ms-1"
+                        style={{ fontSize: "0.78rem" }}
+                      >
+                        {form.discountType === "flat"
+                          ? "(₹ amount)"
+                          : "(% percentage)"}
                       </span>
                     </Form.Label>
                     <Form.Control
@@ -1674,9 +2424,13 @@ const AdminPanel = () => {
                       name="discountValue"
                       value={form.discountValue ?? ""}
                       onChange={handleFormChange}
-                      placeholder={form.discountType === "flat" ? "e.g. 100" : "e.g. 20"}
+                      placeholder={
+                        form.discountType === "flat" ? "e.g. 100" : "e.g. 20"
+                      }
                       min="1"
-                      max={form.discountType === "percentage" ? "100" : undefined}
+                      max={
+                        form.discountType === "percentage" ? "100" : undefined
+                      }
                     />
                   </Form.Group>
                 </Col>
@@ -1686,13 +2440,36 @@ const AdminPanel = () => {
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Min Order Amount (₹)</Form.Label>
-                    <Form.Control type="number" name="minOrderAmount" value={form.minOrderAmount ?? ""} onChange={handleFormChange} placeholder="0 = no minimum" min="0" />
+                    <Form.Control
+                      type="number"
+                      name="minOrderAmount"
+                      value={form.minOrderAmount ?? ""}
+                      onChange={handleFormChange}
+                      placeholder="0 = no minimum"
+                      min="0"
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
-                    <Form.Label>Max Discount Cap (₹) <span className="text-muted" style={{ fontSize: "0.78rem" }}>(% type only)</span></Form.Label>
-                    <Form.Control type="number" name="maxDiscountAmount" value={form.maxDiscountAmount ?? ""} onChange={handleFormChange} placeholder="Leave blank = no cap" min="0" disabled={form.discountType === "flat"} />
+                    <Form.Label>
+                      Max Discount Cap (₹){" "}
+                      <span
+                        className="text-muted"
+                        style={{ fontSize: "0.78rem" }}
+                      >
+                        (% type only)
+                      </span>
+                    </Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="maxDiscountAmount"
+                      value={form.maxDiscountAmount ?? ""}
+                      onChange={handleFormChange}
+                      placeholder="Leave blank = no cap"
+                      min="0"
+                      disabled={form.discountType === "flat"}
+                    />
                   </Form.Group>
                 </Col>
               </Row>
@@ -1701,19 +2478,36 @@ const AdminPanel = () => {
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Total Usage Limit</Form.Label>
-                    <Form.Control type="number" name="usageLimit" value={form.usageLimit ?? ""} onChange={handleFormChange} placeholder="Blank = unlimited" min="1" />
+                    <Form.Control
+                      type="number"
+                      name="usageLimit"
+                      value={form.usageLimit ?? ""}
+                      onChange={handleFormChange}
+                      placeholder="Blank = unlimited"
+                      min="1"
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Per User Limit</Form.Label>
-                    <Form.Control type="number" name="perUserLimit" value={form.perUserLimit ?? 1} onChange={handleFormChange} min="1" />
+                    <Form.Control
+                      type="number"
+                      name="perUserLimit"
+                      value={form.perUserLimit ?? 1}
+                      onChange={handleFormChange}
+                      min="1"
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={4}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Applicable For</Form.Label>
-                    <Form.Select name="applicableFor" value={form.applicableFor || "all"} onChange={handleFormChange}>
+                    <Form.Select
+                      name="applicableFor"
+                      value={form.applicableFor || "all"}
+                      onChange={handleFormChange}
+                    >
                       <option value="all">All Products</option>
                       <option value="clothing">Clothing Only</option>
                       <option value="appliance">Appliances Only</option>
@@ -1726,13 +2520,31 @@ const AdminPanel = () => {
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
                     <Form.Label>Valid From</Form.Label>
-                    <Form.Control type="date" name="validFrom" value={form.validFrom || ""} onChange={handleFormChange} />
+                    <Form.Control
+                      type="date"
+                      name="validFrom"
+                      value={form.validFrom || ""}
+                      onChange={handleFormChange}
+                    />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group className="d_admin_form_group">
-                    <Form.Label>Valid Until <span className="text-muted" style={{ fontSize: "0.78rem" }}>(blank = no expiry)</span></Form.Label>
-                    <Form.Control type="date" name="validUntil" value={form.validUntil || ""} onChange={handleFormChange} />
+                    <Form.Label>
+                      Valid Until{" "}
+                      <span
+                        className="text-muted"
+                        style={{ fontSize: "0.78rem" }}
+                      >
+                        (blank = no expiry)
+                      </span>
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="validUntil"
+                      value={form.validUntil || ""}
+                      onChange={handleFormChange}
+                    />
                   </Form.Group>
                 </Col>
               </Row>
@@ -1769,34 +2581,52 @@ const AdminPanel = () => {
                 </div>
                 <div className="d_admin_view_row">
                   <span>Total</span>
-                  <strong>₹{Number(modal.data?.total || 0).toLocaleString("en-IN")}</strong>
+                  <strong>
+                    ₹{Number(modal.data?.total || 0).toLocaleString("en-IN")}
+                  </strong>
                 </div>
                 <div className="d_admin_view_row">
                   <span>Payment</span>
                   <strong>
-                    {modal.data?.paymentMethod || "—"} / {modal.data?.paymentStatus || "—"}
+                    {modal.data?.paymentMethod || "—"} /{" "}
+                    {modal.data?.paymentStatus || "—"}
                   </strong>
                 </div>
               </div>
 
-              {Array.isArray(modal.data?.items) && modal.data.items.length > 0 && (
-                <div className="mb-3">
-                  <h6>Items</h6>
-                  {modal.data.items.map((item, idx) => (
-                    <div key={idx} className="d-flex align-items-center gap-3 mb-2">
-                      {item.image && <img src={item.image} alt={item.name} style={{ width: 48, height: 48, objectFit: "cover" }} />}
-                      <div>
-                        <strong>{item.name}</strong>
-                        <div className="small text-muted">
-                          Qty: {item.quantity}
-                          {item.size ? ` · Size: ${item.size}` : ""}
-                          {item.color ? ` · Color: ${item.color}` : ""} · ₹{Number(item.price || 0).toLocaleString("en-IN")}
+              {Array.isArray(modal.data?.items) &&
+                modal.data.items.length > 0 && (
+                  <div className="mb-3">
+                    <h6>Items</h6>
+                    {modal.data.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="d-flex align-items-center gap-3 mb-2"
+                      >
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            style={{
+                              width: 48,
+                              height: 48,
+                              objectFit: "cover",
+                            }}
+                          />
+                        )}
+                        <div>
+                          <strong>{item.name}</strong>
+                          <div className="small text-muted">
+                            Qty: {item.quantity}
+                            {item.size ? ` · Size: ${item.size}` : ""}
+                            {item.color ? ` · Color: ${item.color}` : ""} · ₹
+                            {Number(item.price || 0).toLocaleString("en-IN")}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
               {modal.data?.shippingAddress && (
                 <div className="mb-3">
@@ -1804,9 +2634,13 @@ const AdminPanel = () => {
                   <p className="mb-0">{modal.data.shippingAddress.fullName}</p>
                   <p className="mb-0">{modal.data.shippingAddress.street}</p>
                   <p className="mb-0">
-                    {modal.data.shippingAddress.city}, {modal.data.shippingAddress.state} - {modal.data.shippingAddress.pincode}
+                    {modal.data.shippingAddress.city},{" "}
+                    {modal.data.shippingAddress.state} -{" "}
+                    {modal.data.shippingAddress.pincode}
                   </p>
-                  <p className="mb-0">Phone: {modal.data.shippingAddress.phone}</p>
+                  <p className="mb-0">
+                    Phone: {modal.data.shippingAddress.phone}
+                  </p>
                 </div>
               )}
 
@@ -1818,7 +2652,10 @@ const AdminPanel = () => {
                     onChange={async (e) => {
                       const newStatus = e.target.value;
                       await handleOrderStatusChange(modal.data._id, newStatus);
-                      setModal((m) => ({ ...m, data: { ...m.data, status: newStatus } }));
+                      setModal((m) => ({
+                        ...m,
+                        data: { ...m.data, status: newStatus },
+                      }));
                     }}
                   >
                     <option value="pending">Pending</option>
@@ -1834,13 +2671,21 @@ const AdminPanel = () => {
         </Modal.Body>
 
         <Modal.Footer className="d_admin_modal_footer">
-          <Button variant="light" className="d_admin_btn_cancel" onClick={closeModal}>
+          <Button
+            variant="light"
+            className="d_admin_btn_cancel"
+            onClick={closeModal}
+          >
             {isView || modal.type === "order" ? "Close" : "Cancel"}
           </Button>
           {!isView && modal.type !== "order" && (
             <Button
               className="d_admin_btn_save"
-              onClick={() => (modal.type === "category" ? handleCategorySave() : handleSave(modal.type))}
+              onClick={() =>
+                modal.type === "category"
+                  ? handleCategorySave()
+                  : handleSave(modal.type)
+              }
             >
               <FaSave /> {modal.mode === "add" ? "Create" : "Update"}
             </Button>

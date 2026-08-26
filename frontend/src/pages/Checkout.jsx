@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Row, Col, Form, Button, Badge } from "react-bootstrap";
 import {
@@ -16,7 +16,62 @@ import {
 } from "react-icons/fa";
 import { useShop } from "../context/ShopContext";
 import { couponAPI } from "../services/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import "./Checkout.css";
+
+// CardPayment must be defined OUTSIDE Checkout to prevent remounting on every render
+const CardPayment = forwardRef(({ setStripeError, stripeError }, ref) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  useImperativeHandle(ref, () => ({
+    confirmPayment: async (clientSecret, billing) => {
+      if (!stripe || !elements) {
+        throw new Error('Stripe has not loaded yet.');
+      }
+      const card = elements.getElement(CardElement);
+      if (!card) {
+        throw new Error('Card element not available');
+      }
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card,
+          billing_details: billing,
+        },
+      });
+      return result;
+    },
+  }));
+
+  return (
+    <div>
+      <div id="stripe-card-element" className={`d_stripe_card ${stripeError ? 'd_stripe_card_error' : ''}`}>
+        <CardElement
+          options={{
+            hidePostalCode: true,
+            style: {
+              base: {
+                color: '#212529',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                '::placeholder': { color: '#6c757d' },
+                lineHeight: '1.6',
+              },
+              invalid: {
+                color: '#dc3545',
+                iconColor: '#dc3545',
+              },
+            },
+          }}
+          onChange={(e) => setStripeError(e.error ? e.error.message : '')}
+        />
+      </div>
+      {stripeError && <p className="d_field_error">{stripeError}</p>}
+    </div>
+  );
+});
+
 
 const PAYMENT_METHODS = [
   { value: "cod", label: "Cash on Delivery", icon: FaCcStripe, desc: "Pay when you receive" },
@@ -38,9 +93,26 @@ const BANKS = [
   "IndusInd Bank",
 ];
 
+// Initialize Stripe with publishable key from frontend env
+const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || null;
+const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY) : null;
+
 const Checkout = () => {
   const navigate = useNavigate();
-  const { cart, createOrder, loading, user } = useShop();
+  const {
+    cart,
+    createOrder,
+    loading,
+    user,
+    selectedCoupon,
+    setSelectedCoupon,
+  } = useShop();
+
+  // Stripe state
+  const [stripeError, setStripeError] = useState("");
+  // ref to the CardPayment component
+  const cardPaymentRef = useRef(null);
+
   const [submitted, setSubmitted] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [error, setError] = useState("");
@@ -48,6 +120,7 @@ const Checkout = () => {
   const [address, setAddress] = useState({
     fullName: user?.name || "",
     phone: user?.phone || "",
+    email: user?.email || "",
     street: "",
     city: "",
     state: "",
@@ -63,11 +136,15 @@ const Checkout = () => {
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvv: "" });
   const [selectedBank, setSelectedBank] = useState("");
 
+  // Stripe related state
+  const [showStripeLoaded, setShowStripeLoaded] = useState(false);
+
+
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount, message }
+  const [appliedCoupon, setAppliedCoupon] = useState(selectedCoupon); // { code, discount, message }
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [showCouponList, setShowCouponList] = useState(false);
 
@@ -115,15 +192,18 @@ const Checkout = () => {
     setCouponError("");
     try {
       const res = await couponAPI.validate({ code, subtotal });
-      setAppliedCoupon({
+      const nextCoupon = {
         code: res.coupon.code,
         discount: res.discount,
         message: res.message,
-      });
+      };
+      setAppliedCoupon(nextCoupon);
+      setSelectedCoupon(nextCoupon);
       setCouponCode("");
     } catch (err) {
       setCouponError(err.message || "Invalid coupon code");
       setAppliedCoupon(null);
+      setSelectedCoupon(null);
     } finally {
       setCouponLoading(false);
     }
@@ -160,6 +240,8 @@ const Checkout = () => {
 
     if (!address.fullName.trim()) newErrors.fullName = "Full name is required";
     if (!address.phone.trim()) newErrors.phone = "Phone number is required";
+    if (!address.email || !address.email.trim()) newErrors.email = "Email is required";
+    else if (!/^\S+@\S+\.\S+$/.test(address.email.trim())) newErrors.email = "Enter a valid email address";
     if (!address.street.trim()) newErrors.street = "Street address is required";
     if (!address.city.trim()) newErrors.city = "City is required";
     if (!address.state.trim()) newErrors.state = "State is required";
@@ -175,25 +257,10 @@ const Checkout = () => {
       }
     }
     if (paymentMethod === "card") {
-      const rawNumber = card.number.replace(/\s/g, "");
-      if (!rawNumber) newErrors.number = "Card number is required";
-      else if (rawNumber.length < 13) newErrors.number = "Enter a valid card number";
+      // Only validate the name field — card number/expiry/CVV are handled by Stripe's CardElement
       if (!card.name.trim()) newErrors.cardName = "Name on card is required";
-      if (!card.expiry.trim()) {
-        newErrors.expiry = "Expiry date is required";
-      } else if (!/^\d{2}\/\d{2}$/.test(card.expiry)) {
-        newErrors.expiry = "Enter expiry as MM/YY";
-      } else {
-        const [mm, yy] = card.expiry.split("/").map(Number);
-        const now = new Date
-        ();
-        const expDate = new Date(2000 + yy, mm - 1, 1);
-        if (mm < 1 || mm > 12) newErrors.expiry = "Invalid month";
-        else if (expDate < new Date(now.getFullYear(), now.getMonth(), 1))
-          newErrors.expiry = "Card has expired";
-      }
-      if (!card.cvv.trim()) newErrors.cvv = "CVV is required";
-      else if (card.cvv.length < 3) newErrors.cvv = "CVV must be 3–4 digits";
+      // If there's already a Stripe error (e.g. invalid card), surface it
+      if (stripeError) newErrors.stripeCard = stripeError;
     }
     if (paymentMethod === "netbanking") {
       if (!selectedBank) newErrors.bank = "Please select your bank";
@@ -223,15 +290,66 @@ const Checkout = () => {
         shippingAddress: {
           fullName: address.fullName,
           phone: address.phone,
+          email: address.email,
           street: address.street,
           city: address.city,
           state: address.state,
           pincode: address.pincode,
         },
+
         paymentMethod,
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
         couponDiscount: appliedCoupon ? appliedCoupon.discount : 0,
       };
+
+      // If card payment: create PaymentIntent and confirm payment with Stripe
+      if (paymentMethod === "card") {
+        setStripeError("");
+        const base = process.env.REACT_APP_API_URL || "http://localhost:5000";
+        const token = localStorage.getItem("authToken");
+        const resp = await fetch(`${base}/api/payments/create-payment-intent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({ amount: Math.round(total * 100) }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.message || "Failed to initialize payment");
+        }
+        const clientSecret = data.clientSecret;
+
+        if (!cardPaymentRef.current || !cardPaymentRef.current.confirmPayment) {
+          throw new Error("Payment system not initialized. Please refresh the page.");
+        }
+
+        const result = await cardPaymentRef.current.confirmPayment(clientSecret, {
+          name: (card.name && card.name.trim()) ? card.name : address.fullName,
+          phone: address.phone,
+          email: address.email,
+        });
+
+        if (result.error) {
+          // Show error to customer
+          setError(result.error.message || "Payment failed");
+          return;
+        }
+
+        if (result.paymentIntent && result.paymentIntent.status !== "succeeded") {
+          setError("Payment was not completed. Status: " + result.paymentIntent.status);
+          return;
+        }
+
+        // Attach payment info to order payload (backend will mark non-COD as paid)
+        payload.paymentResult = {
+          id: result.paymentIntent.id,
+          status: result.paymentIntent.status,
+          amount_received: result.paymentIntent.amount_received,
+        };
+      }
 
       const response = await createOrder(payload);
       if (response?.success) {
@@ -243,6 +361,7 @@ const Checkout = () => {
           couponCode: appliedCoupon?.code || null,
           couponDiscount: appliedCoupon?.discount || 0,
         });
+        setSelectedCoupon(null);
         setShowSuccess(true);
       }
     } catch (err) {
@@ -283,6 +402,13 @@ const Checkout = () => {
                       <Form.Label>Phone Number</Form.Label>
                       <Form.Control type="tel" name="phone" value={address.phone} onChange={handleAddressChange} placeholder="+91 98765 43210" required />
                       {errors.phone && <p className="d_field_error">{errors.phone}</p>}
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="d_form_group">
+                      <Form.Label>Email Address</Form.Label>
+                      <Form.Control type="email" name="email" value={address.email} onChange={handleAddressChange} placeholder="you@example.com" required />
+                      {errors.email && <p className="d_field_error">{errors.email}</p>}
                     </Form.Group>
                   </Col>
                   <Col md={12}>
@@ -353,74 +479,39 @@ const Checkout = () => {
                   </div>
                 )}
 
-                {/* Card Fields */}
+                {/* Card Fields - Stripe Elements mounted here */}
                 {paymentMethod === "card" && (
                   <div className="d_payment_fields">
                     <p className="d_payment_secure"><FaLock size={11} /> Your card details are encrypted and secure</p>
-                    <Row className="g-3">
-                      <Col xs={12}>
-                        <Form.Group className="d_form_group">
-                          <Form.Label>Card Number <span className="text-danger">*</span></Form.Label>
-                          <Form.Control
-                            type="text"
-                            name="number"
-                            placeholder="1234 5678 9012 3456"
-                            value={card.number}
-                            onChange={handleCardChange}
-                            isInvalid={!!errors.number}
-                            inputMode="numeric"
-                            maxLength={19}
-                          />
-                          <Form.Control.Feedback type="invalid">{errors.number}</Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-                      <Col xs={12}>
-                        <Form.Group className="d_form_group">
-                          <Form.Label>Name on Card <span className="text-danger">*</span></Form.Label>
-                          <Form.Control
-                            type="text"
-                            name="name"
-                            placeholder="John Doe"
-                            value={card.name}
-                            onChange={handleCardChange}
-                            isInvalid={!!errors.cardName}
-                          />
-                          <Form.Control.Feedback type="invalid">{errors.cardName}</Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-                      <Col sm={6}>
-                        <Form.Group className="d_form_group">
-                          <Form.Label>Expiry Date <span className="text-danger">*</span></Form.Label>
-                          <Form.Control
-                            type="text"
-                            name="expiry"
-                            placeholder="MM/YY"
-                            value={card.expiry}
-                            onChange={handleCardChange}
-                            isInvalid={!!errors.expiry}
-                            inputMode="numeric"
-                            maxLength={5}
-                          />
-                          <Form.Control.Feedback type="invalid">{errors.expiry}</Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-                      <Col sm={6}>
-                        <Form.Group className="d_form_group">
-                          <Form.Label>CVV <span className="text-danger">*</span></Form.Label>
-                          <Form.Control
-                            type="password"
-                            name="cvv"
-                            placeholder="•••"
-                            value={card.cvv}
-                            onChange={handleCardChange}
-                            isInvalid={!!errors.cvv}
-                            inputMode="numeric"
-                            maxLength={4}
-                          />
-                          <Form.Control.Feedback type="invalid">{errors.cvv}</Form.Control.Feedback>
-                        </Form.Group>
-                      </Col>
-                    </Row>
+                    {stripePromise ? (
+                      <Elements stripe={stripePromise}>
+                        <Row className="g-3">
+                          <Col xs={12}>
+                            <Form.Group className="d_form_group">
+                              <Form.Label>Name on Card <span className="text-danger">*</span></Form.Label>
+                              <Form.Control
+                                type="text"
+                                name="name"
+                                placeholder="Name on card"
+                                value={card.name}
+                                onChange={handleCardChange}
+                                isInvalid={!!errors.cardName}
+                              />
+                              <Form.Control.Feedback type="invalid">{errors.cardName}</Form.Control.Feedback>
+                            </Form.Group>
+                          </Col>
+                          <Col xs={12}>
+                            <Form.Group className="d_form_group">
+                              <Form.Label>Card Details <span className="text-danger">*</span></Form.Label>
+                              <CardPayment ref={cardPaymentRef} setStripeError={setStripeError} stripeError={stripeError} />
+                              {errors.stripeCard && <p className="d_field_error">{errors.stripeCard}</p>}
+                            </Form.Group>
+                          </Col>
+                        </Row>
+                      </Elements>
+                    ) : (
+                      <div className="alert alert-warning">Stripe publishable key not configured. Please set REACT_APP_STRIPE_PUBLISHABLE_KEY in frontend/.env and restart the dev server.</div>
+                    )}
                   </div>
                 )}
 
@@ -506,14 +597,31 @@ const Checkout = () => {
                   ) : (
                     <>
                       <div className="d_coupon_input_row">
-                        <input
-                          type="text"
+                        <select
                           className={`d_coupon_input${couponError ? " d_coupon_input_error" : ""}`}
-                          placeholder="Enter coupon code"
                           value={couponCode}
-                          onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
-                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
-                        />
+                          onChange={(e) => {
+                            setCouponCode(e.target.value);
+                            setCouponError("");
+                          }}
+                          disabled={couponLoading}
+                        >
+                          <option value="">
+                            {availableCoupons.some((coupon) => coupon.eligible)
+                              ? "Select coupon code"
+                              : "No coupons available"}
+                          </option>
+                          {availableCoupons
+                            .filter((coupon) => coupon.eligible)
+                            .map((coupon) => (
+                              <option key={coupon._id} value={coupon.code}>
+                                {coupon.code}
+                                {coupon.discountPreview > 0
+                                  ? ` - Save ₹${coupon.discountPreview.toLocaleString("en-IN")}`
+                                  : ""}
+                              </option>
+                            ))}
+                        </select>
                         <button
                           type="button"
                           className="d_coupon_apply_btn"
@@ -569,7 +677,13 @@ const Checkout = () => {
                                       setCouponError("");
                                       try {
                                         const res = await couponAPI.validate({ code: c.code, subtotal });
-                                        setAppliedCoupon({ code: res.coupon.code, discount: res.discount, message: res.message });
+                                        const nextCoupon = {
+                                          code: res.coupon.code,
+                                          discount: res.discount,
+                                          message: res.message,
+                                        };
+                                        setAppliedCoupon(nextCoupon);
+                                        setSelectedCoupon(nextCoupon);
                                         setShowCouponList(false);
                                       } catch (err) {
                                         setCouponError(err.message || "Could not apply coupon");

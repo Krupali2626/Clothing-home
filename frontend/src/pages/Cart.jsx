@@ -22,13 +22,19 @@ import { couponAPI } from "../services/api";
 import "./Cart.css";
 
 const Cart = () => {
-  const { cart, updateCartQty, removeFromCart } = useShop();
+  const {
+    cart,
+    updateCartQty,
+    removeFromCart,
+    selectedCoupon,
+    setSelectedCoupon,
+  } = useShop();
 
   // ── Coupon state ──────────────────────────────────────────────────────────
   const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount, message }
+  const [appliedCoupon, setAppliedCoupon] = useState(selectedCoupon); // { code, discount, message }
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [showCouponList, setShowCouponList] = useState(false);
 
@@ -65,11 +71,13 @@ const Cart = () => {
     setCouponError("");
     try {
       const res = await couponAPI.validate({ code: trimmed, subtotal });
-      setAppliedCoupon({
+      const nextCoupon = {
         code: res.coupon.code,
         discount: res.discount,
         message: res.message,
-      });
+      };
+      setAppliedCoupon(nextCoupon);
+      setSelectedCoupon(nextCoupon);
       setCouponInput("");
       setShowCouponList(false);
     } catch (err) {
@@ -81,6 +89,7 @@ const Cart = () => {
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
+    setSelectedCoupon(null);
     setCouponInput("");
     setCouponError("");
   };

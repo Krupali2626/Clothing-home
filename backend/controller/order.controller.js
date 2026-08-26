@@ -1,6 +1,17 @@
-const { Order, Product, StockMovement } = require("../model");
+const { Order, Product, StockMovement, Coupon } = require("../model");
 
 const STATUS_FLOW = ["pending", "processing", "shipped", "delivered", "cancelled"];
+
+const calculateCouponDiscount = (coupon, subtotal) => {
+  const discount =
+    coupon.discountType === "percentage"
+      ? (subtotal * coupon.discountValue) / 100
+      : coupon.discountValue;
+  const cappedDiscount = coupon.maxDiscountAmount
+    ? Math.min(discount, coupon.maxDiscountAmount)
+    : discount;
+  return Math.round(Math.min(cappedDiscount, subtotal));
+};
 
 const normalizeStatus = (status) => {
   if (!status) return null;
@@ -15,14 +26,18 @@ const pushStatusHistory = (order, status, note = "") => {
 // @desc    Create new order
 // @route   POST /api/orders
 exports.createOrder = async (req, res) => {
+  let reservedCoupon = null;
+  let reservedCouponUsageAt = null;
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, couponCode } = req.body;
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: "No order items" });
     }
 
     let itemsPrice = 0;
     const orderItems = [];
+    const stockUpdates = [];
+    const productsForOrder = [];
 
     for (const item of items) {
       const product = await Product.findById(item.product);
@@ -32,8 +47,10 @@ exports.createOrder = async (req, res) => {
       if (product.stock < item.quantity) {
         return res.status(400).json({ success: false, message: `${product.name} out of stock` });
       }
+
       const price = product.discountPrice || product.price;
       itemsPrice += price * item.quantity;
+      productsForOrder.push({ item, product });
       orderItems.push({
         product: product._id,
         name: product.name,
@@ -43,18 +60,104 @@ exports.createOrder = async (req, res) => {
         size: item.size,
         color: item.color,
       });
-      // Atomic condition prevents two concurrent checkout requests overselling.
+    }
+
+    const normalizedCouponCode = couponCode?.trim().toUpperCase();
+    let discount = 0;
+    if (normalizedCouponCode) {
+      const coupon = await Coupon.findOne({ code: normalizedCouponCode });
+      const now = new Date();
+      if (!coupon || !coupon.isActive) {
+        return res.status(400).json({ success: false, message: "This coupon is no longer active" });
+      }
+      if (coupon.validFrom && now < coupon.validFrom) {
+        return res.status(400).json({ success: false, message: "This coupon is not valid yet" });
+      }
+      if (coupon.validUntil && now >= coupon.validUntil) {
+        return res.status(400).json({ success: false, message: "This coupon has expired" });
+      }
+      if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+        return res.status(400).json({ success: false, message: "Coupon usage limit reached" });
+      }
+      if (itemsPrice < coupon.minOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum order amount of ₹${coupon.minOrderAmount.toLocaleString("en-IN")} required for this coupon`,
+        });
+      }
+      const userUsage = coupon.usedBy.filter(
+        (usage) => usage.user.toString() === req.user._id.toString()
+      ).length;
+      if (userUsage >= coupon.perUserLimit) {
+        return res.status(400).json({ success: false, message: "You have reached this coupon's usage limit" });
+      }
+
+      reservedCoupon = await Coupon.findOneAndUpdate(
+        {
+          _id: coupon._id,
+          isActive: true,
+          $and: [
+            { $or: [{ validUntil: null }, { validUntil: { $gt: now } }] },
+            {
+              $or: [
+                { usageLimit: null },
+                { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
+              ],
+            },
+            {
+              $expr: {
+                $lt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: "$usedBy",
+                        as: "usage",
+                        cond: { $eq: ["$$usage.user", req.user._id] },
+                      },
+                    },
+                  },
+                  "$perUserLimit",
+                ],
+              },
+            },
+          ],
+        },
+        {
+          $inc: { usedCount: 1 },
+          $push: { usedBy: { user: req.user._id, usedAt: now } },
+        },
+        { new: true }
+      );
+      if (!reservedCoupon) {
+        return res.status(409).json({ success: false, message: "Coupon usage limit reached. Please try another coupon." });
+      }
+      reservedCouponUsageAt = now;
+      discount = calculateCouponDiscount(coupon, itemsPrice);
+    }
+
+    for (const { item, product } of productsForOrder) {
       const updatedProduct = await Product.findOneAndUpdate(
         { _id: product._id, stock: { $gte: item.quantity } },
         { $inc: { stock: -item.quantity } },
         { new: true }
       );
-      if (!updatedProduct) return res.status(400).json({ success: false, message: `${product.name} no longer has enough stock` });
-      await StockMovement.create({ product: product._id, type: "sale", quantity: -item.quantity, previousStock: updatedProduct.stock + item.quantity, resultingStock: updatedProduct.stock, reason: "Order placed" });
+      if (!updatedProduct) {
+        const stockError = new Error(`${product.name} no longer has enough stock`);
+        stockError.status = 400;
+        throw stockError;
+      }
+
+      stockUpdates.push({
+        product: product._id,
+        quantity: -item.quantity,
+        previousStock: updatedProduct.stock + item.quantity,
+        resultingStock: updatedProduct.stock,
+        reason: "Order placed",
+      });
     }
 
     const shippingPrice = itemsPrice > 999 ? 0 : 49;
-    const totalPrice = itemsPrice + shippingPrice;
+    const totalPrice = itemsPrice + shippingPrice - discount;
 
     const order = await Order.create({
       user: req.user ? req.user._id : undefined,
@@ -65,11 +168,34 @@ exports.createOrder = async (req, res) => {
       shippingPrice,
       totalPrice,
       paymentStatus: paymentMethod === "cod" ? "pending" : "paid",
+      couponCode: normalizedCouponCode,
+      couponDiscount: discount,
     });
+
+    await Promise.all(
+      stockUpdates.map((entry) =>
+        StockMovement.create({
+          product: entry.product,
+          type: "sale",
+          quantity: entry.quantity,
+          previousStock: entry.previousStock,
+          resultingStock: entry.resultingStock,
+          reason: entry.reason,
+          reference: order._id.toString(),
+          performedBy: req.user ? req.user._id : undefined,
+        })
+      )
+    );
 
     res.status(201).json({ success: true, order });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (reservedCoupon) {
+      await Coupon.findByIdAndUpdate(reservedCoupon._id, {
+        $inc: { usedCount: -1 },
+        $pull: { usedBy: { user: req.user._id, usedAt: reservedCouponUsageAt } },
+      });
+    }
+    res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 

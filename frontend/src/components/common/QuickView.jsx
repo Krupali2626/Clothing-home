@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
@@ -16,7 +15,15 @@ import { useShop } from "../../context/ShopContext";
 import "./QuickView.css";
 
 const QuickView = () => {
-  const { quickViewProduct, closeQuickView, addToWishlist, isInWishlist, removeFromWishlist, addToCart, requireAuth } = useShop();
+  const {
+    quickViewProduct,
+    closeQuickView,
+    addToWishlist,
+    isInWishlist,
+    removeFromWishlist,
+    addToCart,
+    requireAuth,
+  } = useShop();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
@@ -41,7 +48,11 @@ const QuickView = () => {
   return (
     <div className="d_quickview_overlay" onClick={closeQuickView}>
       <div className="d_quickview_modal" onClick={(e) => e.stopPropagation()}>
-        <button className="d_quickview_close" onClick={closeQuickView} aria-label="Close quick view">
+        <button
+          className="d_quickview_close"
+          onClick={closeQuickView}
+          aria-label="Close quick view"
+        >
           <FaTimes />
         </button>
 
@@ -49,10 +60,14 @@ const QuickView = () => {
           <Col md={5}>
             <div className="d_quickview_image">
               {quickViewProduct.discount > 0 && (
-                <span className="d_badge_pill d_quickview_discount">-{quickViewProduct.discount}%</span>
+                <span className="d_badge_pill d_quickview_discount">
+                  -{quickViewProduct.discount}%
+                </span>
               )}
               {quickViewProduct.badge && (
-                <span className={`d_badge_pill d_quickview_badge d_badge_${quickViewProduct.badge.toLowerCase().replace(/\s+/g, "_")}`}>
+                <span
+                  className={`d_badge_pill d_quickview_badge d_badge_${quickViewProduct.badge.toLowerCase().replace(/\s+/g, "_")}`}
+                >
                   {quickViewProduct.badge}
                 </span>
               )}
@@ -62,7 +77,9 @@ const QuickView = () => {
 
           <Col md={7}>
             <div className="d_quickview_info">
-              <span className="d_quickview_brand">{quickViewProduct.brand}</span>
+              <span className="d_quickview_brand">
+                {quickViewProduct.brand}
+              </span>
               <h2 className="d_quickview_name">{quickViewProduct.name}</h2>
 
               <div className="d_quickview_rating_row">
@@ -70,15 +87,25 @@ const QuickView = () => {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <FaStar
                       key={i}
-                      className={i < Math.round(quickViewProduct.rating) ? "d_star_filled" : "d_star_empty"}
+                      className={
+                        i < Math.round(quickViewProduct.rating)
+                          ? "d_star_filled"
+                          : "d_star_empty"
+                      }
                     />
                   ))}
                 </div>
-                <span className="d_quickview_rating_val">{quickViewProduct.rating}</span>
-                <span className="d_quickview_review_count">({quickViewProduct.reviewCount} reviews)</span>
+                <span className="d_quickview_rating_val">
+                  {quickViewProduct.rating}
+                </span>
+                <span className="d_quickview_review_count">
+                  ({quickViewProduct.reviewCount} reviews)
+                </span>
                 <span className="d_quickview_stock_badge">
                   {quickViewProduct.stock > 0 ? (
-                    <><FaCheckCircle /> In Stock</>
+                    <>
+                      <FaCheckCircle /> In Stock
+                    </>
                   ) : (
                     "Out of Stock"
                   )}
@@ -86,9 +113,13 @@ const QuickView = () => {
               </div>
 
               <div className="d_quickview_price_row">
-                <span className="d_quickview_price">₹{quickViewProduct.salePrice.toLocaleString("en-IN")}</span>
+                <span className="d_quickview_price">
+                  ₹{quickViewProduct.salePrice.toLocaleString("en-IN")}
+                </span>
                 {quickViewProduct.mrp > quickViewProduct.salePrice && (
-                  <span className="d_quickview_mrp">₹{quickViewProduct.mrp.toLocaleString("en-IN")}</span>
+                  <span className="d_quickview_mrp">
+                    ₹{quickViewProduct.mrp.toLocaleString("en-IN")}
+                  </span>
                 )}
               </div>
 
@@ -155,7 +186,8 @@ const QuickView = () => {
                   disabled={quickViewProduct.stock === 0}
                   onClick={handleAddToCart}
                 >
-                  <FaShoppingCart /> {quickViewProduct.stock === 0 ? "Notify Me" : "Add to Cart"}
+                  <FaShoppingCart />{" "}
+                  {quickViewProduct.stock === 0 ? "Notify Me" : "Add to Cart"}
                 </button>
                 <button
                   className={`d_quickview_wishlist_btn ${isInWishlist(quickViewProduct.id) ? "active" : ""}`}
@@ -166,14 +198,17 @@ const QuickView = () => {
                 </button>
               </div>
 
-              <Link
-                to={`/product/${quickViewProduct.id}`}
-                className="d_quickview_view_full"
-                onClick={closeQuickView}
-              >
-                View Full Details <FaArrowRight size={12} />
-              </Link>
+              
             </div>
+            <div className="d-flex">
+                <Link
+                  to={`/product/${quickViewProduct.id}`}
+                  className="d_quickview_view_full"
+                  onClick={closeQuickView}
+                >
+                  View Full Details <FaArrowRight size={12} />
+                </Link>
+              </div>
           </Col>
         </Row>
       </div>

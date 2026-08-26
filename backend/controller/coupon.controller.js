@@ -43,7 +43,7 @@ exports.validateCoupon = async (req, res) => {
     if (coupon.validFrom && now < coupon.validFrom) {
       return res.status(400).json({ success: false, message: "This coupon is not valid yet" });
     }
-    if (coupon.validUntil && now > coupon.validUntil) {
+    if (coupon.validUntil && now >= coupon.validUntil) {
       return res.status(400).json({ success: false, message: "This coupon has expired" });
     }
     if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
@@ -124,7 +124,7 @@ exports.getPublicCoupons = async (req, res) => {
       } else if (c.validFrom && now < c.validFrom) {
         eligible = false;
         ineligibleReason = `Valid from ${new Date(c.validFrom).toLocaleDateString("en-IN")}`;
-      } else if (c.validUntil && now > c.validUntil) {
+      } else if (c.validUntil && now >= c.validUntil) {
         eligible = false;
         ineligibleReason = "Coupon has expired";
       } else if (c.usageLimit !== null && c.usedCount >= c.usageLimit) {

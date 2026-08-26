@@ -50,6 +50,14 @@ export const ShopProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [cartNotice, setCartNotice] = useState(null);
+  const [selectedCoupon, setSelectedCoupon] = useState(() => {
+    try {
+      const saved = localStorage.getItem("selectedCoupon");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Fetch products from backend
   const fetchProducts = useCallback(async (filters = {}) => {
@@ -124,6 +132,14 @@ export const ShopProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem("wishlist", JSON.stringify(wishlist));
   }, [wishlist]);
+
+  useEffect(() => {
+    if (selectedCoupon) {
+      localStorage.setItem("selectedCoupon", JSON.stringify(selectedCoupon));
+    } else {
+      localStorage.removeItem("selectedCoupon");
+    }
+  }, [selectedCoupon]);
 
   // Initialize on mount
   useEffect(() => {
@@ -385,6 +401,8 @@ export const ShopProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         createOrder,
+        selectedCoupon,
+        setSelectedCoupon,
         cartNotice,
         setCartNotice,
 

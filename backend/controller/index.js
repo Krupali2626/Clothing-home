@@ -5,6 +5,7 @@ const order = require("./order.controller");
 const advertisement = require("./advertisement.controller");
 const contact = require("./contact.controller");
 const coupon = require("./coupon.controller");
+const payment = require("./payment.controller");
 
 module.exports = {
   user,
@@ -14,4 +15,5 @@ module.exports = {
   advertisement,
   contact,
   coupon,
+  payment,
 };
