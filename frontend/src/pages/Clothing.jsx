@@ -11,6 +11,7 @@ import {
 import ProductCard from "../components/common/ProductCard";
 import GoogleAdBanner from "../components/common/GoogleAdBanner";
 import { useShop } from "../context/ShopContext";
+import { productAPI } from "../services/api";
 import "./Clothing.css";
 
 const SORT_OPTIONS = [
@@ -30,6 +31,7 @@ const PRICE_RANGES = [
   { label: "Above ₹5,000", min: 5000, max: Infinity },
 ];
 
+// ─── Filter Section (collapsible) ────────────────────────────────────────────
 const FilterSection = ({ title, children }) => {
   const [open, setOpen] = useState(true);
   return (
@@ -43,13 +45,13 @@ const FilterSection = ({ title, children }) => {
   );
 };
 
+// ─── Filter Panel ─────────────────────────────────────────────────────────────
 const FilterPanel = ({
   filters,
   setFilters,
   brands = [],
   categories = [],
-  searchParams,
-  setSearchParams,
+  onClearAll,
 }) => {
   const handleBrand = (brand) => {
     setFilters((f) => ({
@@ -60,10 +62,10 @@ const FilterPanel = ({
     }));
   };
 
-  const handlePrice = (range) => {
+  const handlePrice = (label) => {
     setFilters((f) => ({
       ...f,
-      priceRange: f.priceRange === range ? null : range,
+      priceRange: f.priceRange === label ? null : label,
     }));
   };
 
@@ -72,39 +74,17 @@ const FilterPanel = ({
   };
 
   const handleCategory = (slug) => {
-    const newCategories = filters.categories[0] === slug ? [] : [slug];
-
     setFilters((f) => ({
       ...f,
-      categories: newCategories,
+      categories: f.categories.includes(slug)
+        ? f.categories.filter((c) => c !== slug)
+        : [...f.categories, slug],
     }));
-    // Update URL to reflect category change
-    if (newCategories.length > 0) {
-      setSearchParams({
-        ...Object.fromEntries(searchParams),
-        category: newCategories[0],
-      });
-    } else {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("category");
-      setSearchParams(newParams);
-    }
-  };
-
-  const handleGender = (gender) => {
-    setFilters((f) => {
-      const current = f.gender || [];
-      return {
-        ...f,
-        gender: current.includes(gender)
-          ? current.filter((g) => g !== gender)
-          : [...current, gender],
-      };
-    });
   };
 
   return (
     <div className="d_filter_panel">
+      {/* Gender */}
       <FilterSection title="Gender">
         <ul className="d_filter_list">
           {["all", "male", "female"].map((g) => (
@@ -115,7 +95,7 @@ const FilterPanel = ({
                   name="gender"
                   checked={
                     g === "all"
-                      ? !(filters.gender || []).length
+                      ? (filters.gender || []).length === 0
                       : (filters.gender || []).includes(g)
                   }
                   onChange={() =>
@@ -134,41 +114,48 @@ const FilterPanel = ({
         </ul>
       </FilterSection>
 
-      <FilterSection title="Category">
-        <ul className="d_filter_list">
-          {categories.map((c) => (
-            <li key={c.id}>
-              <label className="d_filter_checkbox">
-                <input
-                  type="checkbox"
-                  checked={filters.categories.includes(c.slug)}
-                  onChange={() => handleCategory(c.slug)}
-                />
-                <span>{c.name}</span>
-                <small>{c.count || 0}</small>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </FilterSection>
+      {/* Category */}
+      {categories.length > 0 && (
+        <FilterSection title="Category">
+          <ul className="d_filter_list">
+            {categories.map((c) => (
+              <li key={c.id || c.slug}>
+                <label className="d_filter_checkbox">
+                  <input
+                    type="checkbox"
+                    checked={filters.categories.includes(c.slug)}
+                    onChange={() => handleCategory(c.slug)}
+                  />
+                  <span>{c.name}</span>
+                  {c.count != null && <small>{c.count}</small>}
+                </label>
+              </li> 
+            ))}
+          </ul>
+        </FilterSection>
+      )}
 
-      <FilterSection title="Brand">
-        <ul className="d_filter_list">
-          {brands.map((b) => (
-            <li key={b}>
-              <label className="d_filter_checkbox">
-                <input
-                  type="checkbox"
-                  checked={filters.brands.includes(b)}
-                  onChange={() => handleBrand(b)}
-                />
-                <span>{b}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </FilterSection>
+      {/* Brand */}
+      {brands.length > 0 && (
+        <FilterSection title="Brand">
+          <ul className="d_filter_list">
+            {brands.map((b) => (
+              <li key={b}>
+                <label className="d_filter_checkbox">
+                  <input
+                    type="checkbox"
+                    checked={filters.brands.includes(b)}
+                    onChange={() => handleBrand(b)}
+                  />
+                  <span>{b}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </FilterSection>
+      )}
 
+      {/* Price Range */}
       <FilterSection title="Price Range">
         <ul className="d_filter_list">
           {PRICE_RANGES.map((r) => (
@@ -187,6 +174,7 @@ const FilterPanel = ({
         </ul>
       </FilterSection>
 
+      {/* Minimum Rating */}
       <FilterSection title="Minimum Rating">
         {[4, 3, 2].map((r) => (
           <label key={r} className="d_filter_checkbox d_filter_rating">
@@ -204,6 +192,7 @@ const FilterPanel = ({
         ))}
       </FilterSection>
 
+      {/* Availability */}
       <FilterSection title="Availability">
         <label className="d_filter_checkbox">
           <input
@@ -215,190 +204,235 @@ const FilterPanel = ({
         </label>
       </FilterSection>
 
-      <button
-        className="d_filter_clear"
-        onClick={() =>
-          setFilters({
-            categories: [],
-            brands: [],
-            priceRange: null,
-            minRating: 0,
-            inStock: false,
-            gender: [],
-          })
-        }
-      >
+      <button className="d_filter_clear" onClick={onClearAll}>
         Clear All Filters
       </button>
     </div>
   );
 };
 
+// ─── Default filter state ─────────────────────────────────────────────────────
+const defaultFilters = {
+  categories: [],
+  brands: [],
+  priceRange: null,
+  minRating: 0,
+  inStock: false,
+  gender: [],
+};
+
+// ─── Main Clothing Page ───────────────────────────────────────────────────────
 const Clothing = () => {
-  const {
-    products,
-    loading,
-    fetchProducts,
-    categories: apiCategories,
-  } = useShop();
+  const { categories: apiCategories } = useShop();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initCategory = useMemo(
-    () => searchParams.get("category") || "",
-    [searchParams.toString()],
-  );
-  const initSort = searchParams.get("sort") || "featured";
-  const initFilter = searchParams.get("filter") || "";
-  const initSearch = searchParams.get("search") || "";
+  // ── Local products state (separate from ShopContext global) ──
+  const [allProducts, setAllProducts] = useState([]);
+  const [localLoading, setLocalLoading] = useState(true);
 
-  const [sort, setSort] = useState(initSort);
+  // ── Read URL params once on mount ──
+  const urlCategory = searchParams.get("category") || "";
+  const urlSort = searchParams.get("sort") || "featured";
+  const urlFilter = searchParams.get("filter") || "";
+  const urlSearch = searchParams.get("search") || "";
+
+  const [sort, setSort] = useState(urlSort);
+  const [search, setSearch] = useState(urlSearch);
   const [filters, setFilters] = useState({
-    categories: initCategory ? [initCategory] : [],
-    brands: [],
-    priceRange: null,
-    minRating: 0,
-    inStock: false,
-    gender: [],
+    ...defaultFilters,
+    categories: urlCategory ? [urlCategory] : [],
   });
   const [showMobileFilter, setShowMobileFilter] = useState(false);
-  const [search, setSearch] = useState(initSearch);
 
+  // ── Fetch clothing products once ──────────────────────────────────────────
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    setLocalLoading(true);
+    productAPI
+      .getAllProducts({ type: "clothing" })
+      .then((res) => setAllProducts(res.products || []))
+      .catch((err) => {
+        console.error("Failed to fetch clothing products:", err);
+        setAllProducts([]);
+      })
+      .finally(() => setLocalLoading(false));
+  }, []);
 
+  // ── Sync URL → filter state when URL changes externally (e.g. nav links) ──
+  useEffect(() => {
+    const cat = searchParams.get("category") || "";
+    setFilters((f) => {
+      const already =
+        f.categories.length === (cat ? 1 : 0) &&
+        (!cat || f.categories[0] === cat);
+      if (already) return f; // no change, avoid re-render
+      return { ...f, categories: cat ? [cat] : [] };
+    });
+  }, [searchParams.get("category")]);
+
+  // ── Derived: unique brands from local products ────────────────────────────
+  const brands = useMemo(
+    () => [...new Set(allProducts.map((p) => p.brand || "").filter(Boolean))],
+    [allProducts],
+  );
+
+  // ── Derived: clothing categories (optionally filtered by gender) ──────────
   const clothingCats = useMemo(() => {
-    let cats = apiCategories.filter((c) => c.type === "clothing");
+    // Accept categories that have type "clothing" OR whose slug appears in products
+    const productCategorySlugs = new Set(allProducts.map((p) => p.category).filter(Boolean));
 
-    // Gender select હોય તો Product પરથી category શોધો
+    let cats = apiCategories.filter(
+      (c) =>
+        c.type === "clothing" ||
+        productCategorySlugs.has(c.slug),
+    );
+
+    // When a single gender is selected, only show categories that have products for that gender
     if (filters.gender.length === 1) {
       const gender = filters.gender[0].toLowerCase();
-
-      const categorySlugs = [
-        ...new Set(
-          products
-            .filter(
-              (p) =>
-                p.gender && p.gender.toLowerCase() === gender && p.category,
-            )
-            .map((p) => p.category),
-        ),
-      ];
-
-      cats = cats.filter((c) => categorySlugs.includes(c.slug));
+      const genderSlugs = new Set(
+        allProducts
+          .filter((p) => p.gender && p.gender.toLowerCase() === gender)
+          .map((p) => p.category)
+          .filter(Boolean),
+      );
+      cats = cats.filter((c) => genderSlugs.has(c.slug));
     }
 
     return cats;
-  }, [apiCategories, products, filters.gender]);
-  // Get unique brands from products
-  const brands = [
-    ...new Set(products.map((p) => p.brand || "").filter(Boolean)),
-  ];
+  }, [apiCategories, allProducts, filters.gender]);
 
-  // Fetch products from API when component mounts or category/search/gender changes
-  useEffect(() => {
-    const fetchParams = {
-      type: "clothing",
-    };
-
-    if (initSearch) fetchParams.search = initSearch;
-
-    if (filters.gender.length === 1) fetchParams.gender = filters.gender[0];
-
-    fetchProducts(fetchParams);
-  }, [filters.gender, initSearch]);
-
-  // Initial fetch with URL params
-  useEffect(() => {
-    const fetchParams = { type: "clothing" };
-    if (initCategory) fetchParams.category = initCategory;
-    if (initSearch) fetchParams.search = initSearch;
-    fetchProducts(fetchParams);
-  }, []);
-
-  // Sync URL category with filter state when URL changes
-  useEffect(() => {
-    const urlCategory = searchParams.get("category");
-    if (urlCategory && !filters.categories.includes(urlCategory)) {
-      setFilters((f) => ({ ...f, categories: [urlCategory] }));
-    } else if (!urlCategory && filters.categories.length > 0) {
-      setFilters((f) => ({ ...f, categories: [] }));
-    }
-  }, [searchParams.toString(), filters.categories]);
-
-  // Update URL when search changes
-  const handleSearchChange = (e) => {
-    const newSearch = e.target.value;
-    setSearch(newSearch);
-    if (newSearch.trim()) {
-      setSearchParams({
-        ...Object.fromEntries(searchParams),
-        search: newSearch,
-      });
-    } else {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("search");
-      setSearchParams(newParams);
-    }
-  };
-
+  // ── Filtered + sorted product list ───────────────────────────────────────
   const filtered = useMemo(() => {
-    let list = [...products];
+    let list = [...allProducts];
 
-    if (initFilter === "sale") list = list.filter((p) => p.discount >= 15);
-    if (filters.gender.length) {
+    // URL ?filter=sale
+    if (urlFilter === "sale") {
+      list = list.filter((p) => (p.discount || 0) >= 15);
+    }
+
+    // Gender
+    if (filters.gender.length > 0) {
       list = list.filter(
         (p) => p.gender && filters.gender.includes(p.gender.toLowerCase()),
       );
     }
-    if (filters.categories.length)
-      list = list.filter((p) => filters.categories.includes(p.category || ""));
-    if (filters.brands.length)
-      list = list.filter((p) => filters.brands.includes(p.brand));
-    if (filters.priceRange) {
-      const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
-      if (range)
-        list = list.filter(
-          (p) => p.salePrice >= range.min && p.salePrice <= range.max,
-        );
-    }
-    if (filters.minRating)
-      list = list.filter((p) => p.rating >= filters.minRating);
-    if (filters.inStock) list = list.filter((p) => p.stock > 0);
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(searchLower) ||
-          p.brand?.toLowerCase().includes(searchLower),
+
+    // Category
+    if (filters.categories.length > 0) {
+      list = list.filter((p) =>
+        filters.categories.includes(p.category || ""),
       );
     }
 
+    // Brand
+    if (filters.brands.length > 0) {
+      list = list.filter((p) => filters.brands.includes(p.brand));
+    }
+
+    // Price range
+    if (filters.priceRange) {
+      const range = PRICE_RANGES.find((r) => r.label === filters.priceRange);
+      if (range) {
+        list = list.filter(
+          (p) =>
+            (p.salePrice || p.price || 0) >= range.min &&
+            (p.salePrice || p.price || 0) <= range.max,
+        );
+      }
+    }
+
+    // Rating
+    if (filters.minRating > 0) {
+      list = list.filter((p) => (p.rating || 0) >= filters.minRating);
+    }
+
+    // In stock
+    if (filters.inStock) {
+      list = list.filter((p) => p.stock > 0);
+    }
+
+    // Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (p) =>
+          (p.name || "").toLowerCase().includes(q) ||
+          (p.brand || "").toLowerCase().includes(q),
+      );
+    }
+
+    // Sort
     switch (sort) {
       case "newest":
-        return list.reverse();
+        return [...list].reverse();
       case "price-asc":
-        return list.sort((a, b) => a.salePrice - b.salePrice);
+        return [...list].sort(
+          (a, b) => (a.salePrice || a.price || 0) - (b.salePrice || b.price || 0),
+        );
       case "price-desc":
-        return list.sort((a, b) => b.salePrice - a.salePrice);
+        return [...list].sort(
+          (a, b) => (b.salePrice || b.price || 0) - (a.salePrice || a.price || 0),
+        );
       case "rating":
-        return list.sort((a, b) => b.rating - a.rating);
+        return [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
       case "discount":
-        return list.sort((a, b) => b.discount - a.discount);
+        return [...list].sort((a, b) => (b.discount || 0) - (a.discount || 0));
       default:
         return list;
     }
-  }, [filters, sort, search, initFilter, products]);
+  }, [allProducts, filters, sort, search, urlFilter]);
 
+  // ── Active filter count (for badge) ──────────────────────────────────────
   const activeFilterCount =
-    (filters.gender?.length ? 1 : 0) +
+    (filters.gender.length > 0 ? 1 : 0) +
     filters.categories.length +
     filters.brands.length +
     (filters.priceRange ? 1 : 0) +
-    (filters.minRating ? 1 : 0) +
+    (filters.minRating > 0 ? 1 : 0) +
     (filters.inStock ? 1 : 0);
 
-  if (loading && products.length === 0) {
+  // ── Clear all filters ─────────────────────────────────────────────────────
+  const clearAllFilters = () => {
+    setFilters(defaultFilters);
+    setSearch("");
+    setSort("featured");
+    // Clear all filter-related params from URL
+    const newParams = new URLSearchParams();
+    // Keep only non-filter params like ?filter=sale if present
+    const filterParam = searchParams.get("filter");
+    if (filterParam) newParams.set("filter", filterParam);
+    setSearchParams(newParams);
+  };
+
+  // ── Search handler ────────────────────────────────────────────────────────
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearch(val);
+    const newParams = new URLSearchParams(searchParams);
+    if (val.trim()) {
+      newParams.set("search", val);
+    } else {
+      newParams.delete("search");
+    }
+    setSearchParams(newParams);
+  };
+
+  // ── Sort handler ──────────────────────────────────────────────────────────
+  const handleSortChange = (e) => {
+    const val = e.target.value;
+    setSort(val);
+    const newParams = new URLSearchParams(searchParams);
+    if (val && val !== "featured") {
+      newParams.set("sort", val);
+    } else {
+      newParams.delete("sort");
+    }
+    setSearchParams(newParams);
+  };
+
+  const isLoading = localLoading;
+
+  if (isLoading) {
     return (
       <div className="d_listing_page">
         <div className="container d_section text-center">
@@ -449,8 +483,7 @@ const Clothing = () => {
               setFilters={setFilters}
               brands={brands}
               categories={clothingCats}
-              searchParams={searchParams}
-              setSearchParams={setSearchParams}
+              onClearAll={clearAllFilters}
             />
           </aside>
 
@@ -489,7 +522,7 @@ const Clothing = () => {
                   <Form.Select
                     size="sm"
                     value={sort}
-                    onChange={(e) => setSort(e.target.value)}
+                    onChange={handleSortChange}
                     className="d_sort_select"
                   >
                     {SORT_OPTIONS.map((o) => (
@@ -506,26 +539,14 @@ const Clothing = () => {
             {filtered.length === 0 ? (
               <div className="d_no_results">
                 <p>No products match your filters.</p>
-                <button
-                  className="d_btn_outline"
-                  onClick={() =>
-                    setFilters({
-                      categories: [],
-                      brands: [],
-                      priceRange: null,
-                      minRating: 0,
-                      inStock: false,
-                      gender: [],
-                    })
-                  }
-                >
+                <button className="d_btn_outline" onClick={clearAllFilters}>
                   Clear Filters
                 </button>
               </div>
             ) : (
               <Row className="g-3">
                 {filtered.map((p) => (
-                  <Col key={p.id} xs={6} md={4} lg={4} xl={3}>
+                  <Col key={p.id || p._id} xs={6} md={4} lg={4} xl={3}>
                     <ProductCard product={p} />
                   </Col>
                 ))}
@@ -545,7 +566,9 @@ const Clothing = () => {
         <Offcanvas.Header className="d_filter_offcanvas_header">
           <h5>
             Filters{" "}
-            {activeFilterCount > 0 && <Badge bg="">{activeFilterCount}</Badge>}
+            {activeFilterCount > 0 && (
+              <Badge bg="">{activeFilterCount}</Badge>
+            )}
           </h5>
           <button
             onClick={() => setShowMobileFilter(false)}
@@ -560,8 +583,7 @@ const Clothing = () => {
             setFilters={setFilters}
             brands={brands}
             categories={clothingCats}
-            searchParams={searchParams}
-            setSearchParams={setSearchParams}
+            onClearAll={clearAllFilters}
           />
         </Offcanvas.Body>
       </Offcanvas>

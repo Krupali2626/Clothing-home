@@ -416,7 +416,7 @@ const InventoryManagement = () => {
                                 setCurrentPage((page) => Math.max(page - 1, 1))
                               }
                             >
-                              Previous
+                              <FaArrowLeft /> 
                             </Button>
                             {pageNumbers.map((page) => (
                               <Button
@@ -442,7 +442,8 @@ const InventoryManagement = () => {
                                 )
                               }
                             >
-                              Next
+                              {/* <FaArrowRight /> */}
+                              <FaArrowLeft style={{ transform: "rotate(180deg)" }} />
                             </Button>
                           </div>
                         </div>
@@ -453,92 +454,206 @@ const InventoryManagement = () => {
               </Card>
               <Modal
                 show={!!selected && !showHistory}
-                onHide={() => setSelected(null)}
+                onHide={() => { setSelected(null); setSubmitError(""); }}
                 centered
+                className="d_inv_stock_modal"
               >
                 <Form onSubmit={saveAdjustment}>
-                  <Modal.Header closeButton>
-                    <Modal.Title>Update stock</Modal.Title>
+                  <Modal.Header className="d_inv_modal_header">
+                    <div className="d_inv_modal_title_wrap">
+                      <div className="d_inv_modal_icon">
+                        <FaBoxes />
+                      </div>
+                      <div>
+                        <Modal.Title className="d_inv_modal_title">
+                          Update Stock
+                        </Modal.Title>
+                        <p className="d_inv_modal_subtitle">
+                          {selected?.name}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="d_inv_modal_close"
+                      onClick={() => { setSelected(null); setSubmitError(""); }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
                   </Modal.Header>
-                  <Modal.Body>
+
+                  <Modal.Body className="d_inv_modal_body">
                     {submitError && (
-                      <Alert variant="danger">{submitError}</Alert>
+                      <Alert variant="danger" className="d_inv_alert">
+                        {submitError}
+                      </Alert>
                     )}
-                    <p className="mb-3">
-                      <strong>{selected?.name}</strong>
-                      <br />
-                      <span className="text-muted">
-                        Current stock: {selected?.stock}
-                      </span>
-                    </p>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Action</Form.Label>
-                      <Form.Select
-                        value={form.operation}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            operation: e.target.value,
-                            quantity:
-                              e.target.value === "set" ? selected.stock : 1,
-                          })
-                        }
-                      >
-                        <option value="in">Add stock</option>
-                        <option value="out">Remove stock</option>
-                        <option value="set">Set exact stock</option>
-                      </Form.Select>
-                    </Form.Group>
-                    <Form.Group className="mb-3">
-                      <Form.Label>
-                        {form.operation === "set"
-                          ? "New total stock"
-                          : "Quantity"}
-                      </Form.Label>
-                      <Form.Control
-                        required
-                        min={form.operation === "set" ? "0" : "1"}
-                        type="number"
-                        value={form.quantity}
-                        onChange={(e) =>
-                          setForm({ ...form, quantity: e.target.value })
-                        }
-                      />
-                      <Form.Text className="text-muted">
-                        {form.operation === "set"
-                          ? "This replaces the current product stock."
-                          : "This quantity will be added to or removed from current stock."}
-                      </Form.Text>
-                    </Form.Group>
-                    <Form.Group className="mb-3">
-                      <Form.Label>
-                        Reason <span className="text-muted">(optional)</span>
-                      </Form.Label>
-                      <Form.Control
-                        maxLength="500"
-                        value={form.reason}
-                        onChange={(e) =>
-                          setForm({ ...form, reason: e.target.value })
-                        }
-                        placeholder="e.g. Supplier delivery"
-                      />
-                    </Form.Group>
-                    <Form.Group>
-                      <Form.Label>Reference (optional)</Form.Label>
-                      <Form.Control
-                        value={form.reference}
-                        onChange={(e) =>
-                          setForm({ ...form, reference: e.target.value })
-                        }
-                        placeholder="Invoice or note number"
-                      />
-                    </Form.Group>
+
+                    {/* Current stock indicator */}
+                    <div className="d_inv_stock_info">
+                      <div className="d_inv_stock_info_item">
+                        <span className="d_inv_label">Current Stock</span>
+                        <span
+                          className={`d_inv_stock_badge ${
+                            selected?.stock === 0
+                              ? "out"
+                              : selected?.stock <= (selected?.lowStockThreshold ?? 5)
+                              ? "low"
+                              : "ok"
+                          }`}
+                        >
+                          {selected?.stock ?? 0} units
+                        </span>
+                      </div>
+                      <div className="d_inv_stock_info_item">
+                        <span className="d_inv_label">Alert Threshold</span>
+                        <span className="d_inv_stock_threshold">
+                          ≤ {selected?.lowStockThreshold ?? 5} units
+                        </span>
+                      </div>
+                      <div className="d_inv_stock_info_item">
+                        <span className="d_inv_label">Preview</span>
+                        <span className="d_inv_stock_preview">
+                          {(() => {
+                            const curr = Number(selected?.stock) || 0;
+                            const qty = Number(form.quantity) || 0;
+                            if (form.operation === "set") return `→ ${qty} units`;
+                            if (form.operation === "out") return `→ ${Math.max(0, curr - qty)} units`;
+                            return `→ ${curr + qty} units`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="d_inv_form_body">
+                      {/* Action */}
+                      <div className="d_inv_form_group">
+                        <label className="d_inv_form_label">Action</label>
+                        <div className="d_inv_operation_group">
+                          {[
+                            { value: "in", label: "Add Stock", icon: "+" },
+                            { value: "out", label: "Remove Stock", icon: "−" },
+                            { value: "set", label: "Set Exact", icon: "=" },
+                          ].map(({ value, label, icon }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={`d_inv_op_btn ${form.operation === value ? "active" : ""} ${value}`}
+                              onClick={() =>
+                                setForm({
+                                  ...form,
+                                  operation: value,
+                                  quantity: value === "set" ? selected?.stock ?? 0 : 1,
+                                })
+                              }
+                            >
+                              <span className="d_inv_op_icon">{icon}</span>
+                              <span>{label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="d_inv_form_group">
+                        <label className="d_inv_form_label">
+                          {form.operation === "set" ? "New Total Stock" : "Quantity"}
+                        </label>
+                        <div className="d_inv_qty_wrap">
+                          <button
+                            type="button"
+                            className="d_inv_qty_btn"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                quantity: Math.max(
+                                  form.operation === "set" ? 0 : 1,
+                                  Number(f.quantity) - 1,
+                                ),
+                              }))
+                            }
+                          >
+                            −
+                          </button>
+                          <input
+                            required
+                            min={form.operation === "set" ? "0" : "1"}
+                            type="number"
+                            className="d_inv_qty_input"
+                            value={form.quantity}
+                            onChange={(e) =>
+                              setForm({ ...form, quantity: e.target.value })
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="d_inv_qty_btn"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                quantity: Number(f.quantity) + 1,
+                              }))
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="d_inv_form_hint">
+                          {form.operation === "set"
+                            ? "Replaces the current stock with this exact value."
+                            : form.operation === "out"
+                            ? "This quantity will be deducted from current stock."
+                            : "This quantity will be added to current stock."}
+                        </p>
+                      </div>
+
+                      {/* Reason */}
+                      <div className="d_inv_form_group">
+                        <label className="d_inv_form_label">
+                          Reason <span className="d_inv_optional">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="d_inv_form_input"
+                          maxLength={500}
+                          value={form.reason}
+                          onChange={(e) =>
+                            setForm({ ...form, reason: e.target.value })
+                          }
+                          placeholder="e.g. Supplier delivery, Damaged goods…"
+                        />
+                      </div>
+
+                      {/* Reference */}
+                      <div className="d_inv_form_group">
+                        <label className="d_inv_form_label">
+                          Reference <span className="d_inv_optional">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="d_inv_form_input"
+                          value={form.reference}
+                          onChange={(e) =>
+                            setForm({ ...form, reference: e.target.value })
+                          }
+                          placeholder="Invoice or purchase order number"
+                        />
+                      </div>
+                    </div>
                   </Modal.Body>
-                  <Modal.Footer>
-                    <Button variant="light" onClick={() => setSelected(null)}>
+
+                  <Modal.Footer className="d_inv_modal_footer">
+                    <button
+                      type="button"
+                      className="d_inv_btn_cancel"
+                      onClick={() => { setSelected(null); setSubmitError(""); }}
+                    >
                       Cancel
-                    </Button>
-                    <Button type="submit">Update stock</Button>
+                    </button>
+                    <button type="submit" className="d_inv_btn_save">
+                      <FaPlus size={12} /> Save Changes
+                    </button>
                   </Modal.Footer>
                 </Form>
               </Modal>

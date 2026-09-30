@@ -1686,7 +1686,7 @@ const AdminPanel = () => {
                       </div>
                       <div className="d_myaccount_card_body">
                         <Row className="g-4">
-                          <Col md={6}>
+                          <Col>
                             <div className="d_setting_section">
                               <h5>Store Settings</h5>
                               <div className="d_myaccount_field">
@@ -1730,70 +1730,7 @@ const AdminPanel = () => {
                               </div>
                             </div>
                           </Col>
-                          <Col md={6}>
-                            <div className="d_setting_section">
-                              <h5>Notification Settings</h5>
-                              <div className="d_setting_toggle">
-                                <span>Email Notifications</span>
-                                <button
-                                  type="button"
-                                  className={`d_toggle_btn ${settings.emailNotifications ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() =>
-                                    setSettings({
-                                      ...settings,
-                                      emailNotifications:
-                                        !settings.emailNotifications,
-                                    })
-                                  }
-                                >
-                                  {settings.emailNotifications ? (
-                                    <FaToggleOn />
-                                  ) : (
-                                    <FaToggleOff />
-                                  )}
-                                </button>
-                              </div>
-                              <div className="d_setting_toggle">
-                                <span>SMS Notifications</span>
-                                <button
-                                  type="button"
-                                  className={`d_toggle_btn ${settings.smsNotifications ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() =>
-                                    setSettings({
-                                      ...settings,
-                                      smsNotifications:
-                                        !settings.smsNotifications,
-                                    })
-                                  }
-                                >
-                                  {settings.smsNotifications ? (
-                                    <FaToggleOn />
-                                  ) : (
-                                    <FaToggleOff />
-                                  )}
-                                </button>
-                              </div>
-                              <div className="d_setting_toggle">
-                                <span>Order Alerts</span>
-                                <button
-                                  type="button"
-                                  className={`d_toggle_btn ${settings.orderAlerts ? "d_toggle_active" : "d_toggle_inactive"}`}
-                                  onClick={() =>
-                                    setSettings({
-                                      ...settings,
-                                      orderAlerts: !settings.orderAlerts,
-                                    })
-                                  }
-                                >
-                                  {settings.orderAlerts ? (
-                                    <FaToggleOn />
-                                  ) : (
-                                    <FaToggleOff />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </Col>
+                          
                         </Row>
                         <div className="mt-4">
                           <button
@@ -2563,109 +2500,199 @@ const AdminPanel = () => {
 
           {/* ORDER */}
           {modal.type === "order" && (
-            <div>
-              <div className="d_admin_view_grid mb-3">
-                <div className="d_admin_view_row">
-                  <span>Order ID</span>
-                  <strong>{modal.data?.id}</strong>
+            <div className="d_order_detail">
+
+              {/* ── Top summary bar ── */}
+              <div className="d_order_summary_bar">
+                <div className="d_order_summary_item">
+                  <span className="d_order_summary_label">Order ID</span>
+                  <span className="d_order_summary_value d_order_id">
+                    #{modal.data?.id}
+                  </span>
                 </div>
-                <div className="d_admin_view_row">
-                  <span>Customer</span>
-                  <strong>
-                    {modal.data?.customer} ({modal.data?.email})
-                  </strong>
+                <div className="d_order_summary_item">
+                  <span className="d_order_summary_label">Date</span>
+                  <span className="d_order_summary_value">{modal.data?.date}</span>
                 </div>
-                <div className="d_admin_view_row">
-                  <span>Date</span>
-                  <strong>{modal.data?.date}</strong>
-                </div>
-                <div className="d_admin_view_row">
-                  <span>Total</span>
-                  <strong>
+                <div className="d_order_summary_item">
+                  <span className="d_order_summary_label">Order Total</span>
+                  <span className="d_order_summary_value d_order_total">
                     ₹{Number(modal.data?.total || 0).toLocaleString("en-IN")}
-                  </strong>
+                  </span>
                 </div>
-                <div className="d_admin_view_row">
-                  <span>Payment</span>
-                  <strong>
-                    {modal.data?.paymentMethod || "—"} /{" "}
-                    {modal.data?.paymentStatus || "—"}
-                  </strong>
+                <div className="d_order_summary_item">
+                  <span className="d_order_summary_label">Status</span>
+                  <Badge className={`d_status_${modal.data?.status}`}>
+                    {formatStatus(modal.data?.status)}
+                  </Badge>
                 </div>
               </div>
 
-              {Array.isArray(modal.data?.items) &&
-                modal.data.items.length > 0 && (
-                  <div className="mb-3">
-                    <h6>Items</h6>
-                    {modal.data.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="d-flex align-items-center gap-3 mb-2"
-                      >
-                        {item.image && (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            style={{
-                              width: 48,
-                              height: 48,
-                              objectFit: "cover",
-                            }}
-                          />
+              <div className="d_order_detail_body">
+                {/* ── Left column ── */}
+                <div className="d_order_detail_left">
+
+                  {/* Customer info */}
+                  <div className="d_order_section">
+                    <h6 className="d_order_section_title">
+                      <FaUser size={13} /> Customer
+                    </h6>
+                    <div className="d_order_info_grid">
+                      <div className="d_order_info_row">
+                        <span>Name</span>
+                        <strong>{modal.data?.customer || "—"}</strong>
+                      </div>
+                      <div className="d_order_info_row">
+                        <span>Email</span>
+                        <strong>{modal.data?.email || "—"}</strong>
+                      </div>
+                      <div className="d_order_info_row">
+                        <span>Payment</span>
+                        <strong>{modal.data?.paymentMethod || "—"}</strong>
+                      </div>
+                      <div className="d_order_info_row">
+                        <span>Pay Status</span>
+                        <strong
+                          style={{
+                            color:
+                              modal.data?.paymentStatus === "paid"
+                                ? "#059669"
+                                : modal.data?.paymentStatus === "failed"
+                                  ? "#dc2626"
+                                  : "#d97706",
+                          }}
+                        >
+                          {modal.data?.paymentStatus
+                            ? modal.data.paymentStatus.charAt(0).toUpperCase() +
+                              modal.data.paymentStatus.slice(1)
+                            : "—"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shipping address */}
+                  {modal.data?.shippingAddress && (
+                    <div className="d_order_section">
+                      <h6 className="d_order_section_title">
+                        <FaChevronRight size={11} /> Shipping Address
+                      </h6>
+                      <address className="d_order_address">
+                        <strong>{modal.data.shippingAddress.fullName}</strong>
+                        <span>{modal.data.shippingAddress.street}</span>
+                        <span>
+                          {modal.data.shippingAddress.city},{" "}
+                          {modal.data.shippingAddress.state} –{" "}
+                          {modal.data.shippingAddress.pincode}
+                        </span>
+                        {modal.data.shippingAddress.phone && (
+                          <span>📞 {modal.data.shippingAddress.phone}</span>
                         )}
-                        <div>
-                          <strong>{item.name}</strong>
-                          <div className="small text-muted">
-                            Qty: {item.quantity}
-                            {item.size ? ` · Size: ${item.size}` : ""}
-                            {item.color ? ` · Color: ${item.color}` : ""} · ₹
-                            {Number(item.price || 0).toLocaleString("en-IN")}
+                      </address>
+                    </div>
+                  )}
+
+                  {/* Update status (edit mode only) */}
+                  {!isView && (
+                    <div className="d_order_section">
+                      <h6 className="d_order_section_title">
+                        <FaEdit size={12} /> Update Status
+                      </h6>
+                      <Form.Select
+                        className="d_order_status_select"
+                        value={modal.data?.status || "pending"}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value;
+                          await handleOrderStatusChange(
+                            modal.data._id,
+                            newStatus,
+                          );
+                          setModal((m) => ({
+                            ...m,
+                            data: { ...m.data, status: newStatus },
+                          }));
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </Form.Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Right column — items ── */}
+                <div className="d_order_detail_right">
+                  <div className="d_order_section">
+                    <h6 className="d_order_section_title">
+                      <FaBox size={12} /> Order Items
+                      {Array.isArray(modal.data?.items) && (
+                        <span className="d_order_item_count">
+                          {modal.data.items.length} item
+                          {modal.data.items.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </h6>
+
+                    {Array.isArray(modal.data?.items) &&
+                    modal.data.items.length > 0 ? (
+                      <div className="d_order_items_list">
+                        {modal.data.items.map((item, idx) => (
+                          <div key={idx} className="d_order_item_row">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="d_order_item_img"
+                              />
+                            ) : (
+                              <div className="d_order_item_img_placeholder">
+                                <FaBox />
+                              </div>
+                            )}
+                            <div className="d_order_item_info">
+                              <strong className="d_order_item_name">
+                                {item.name}
+                              </strong>
+                              <div className="d_order_item_meta">
+                                {item.size && <span>Size: {item.size}</span>}
+                                {item.color && (
+                                  <span>Color: {item.color}</span>
+                                )}
+                                <span>Qty: {item.quantity || item.qty || 1}</span>
+                              </div>
+                            </div>
+                            <div className="d_order_item_price">
+                              ₹
+                              {Number(
+                                (item.price || 0) *
+                                  (item.quantity || item.qty || 1),
+                              ).toLocaleString("en-IN")}
+                            </div>
                           </div>
+                        ))}
+
+                        {/* Total row */}
+                        <div className="d_order_items_total">
+                          <span>Order Total</span>
+                          <strong>
+                            ₹
+                            {Number(modal.data?.total || 0).toLocaleString(
+                              "en-IN",
+                            )}
+                          </strong>
                         </div>
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-muted" style={{ fontSize: 13 }}>
+                        No items found.
+                      </p>
+                    )}
                   </div>
-                )}
-
-              {modal.data?.shippingAddress && (
-                <div className="mb-3">
-                  <h6>Shipping Address</h6>
-                  <p className="mb-0">{modal.data.shippingAddress.fullName}</p>
-                  <p className="mb-0">{modal.data.shippingAddress.street}</p>
-                  <p className="mb-0">
-                    {modal.data.shippingAddress.city},{" "}
-                    {modal.data.shippingAddress.state} -{" "}
-                    {modal.data.shippingAddress.pincode}
-                  </p>
-                  <p className="mb-0">
-                    Phone: {modal.data.shippingAddress.phone}
-                  </p>
                 </div>
-              )}
-
-              {!isView && (
-                <Form.Group className="d_admin_form_group">
-                  <Form.Label>Status</Form.Label>
-                  <Form.Select
-                    value={modal.data?.status || "pending"}
-                    onChange={async (e) => {
-                      const newStatus = e.target.value;
-                      await handleOrderStatusChange(modal.data._id, newStatus);
-                      setModal((m) => ({
-                        ...m,
-                        data: { ...m.data, status: newStatus },
-                      }));
-                    }}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </Form.Select>
-                </Form.Group>
-              )}
+              </div>
             </div>
           )}
         </Modal.Body>
